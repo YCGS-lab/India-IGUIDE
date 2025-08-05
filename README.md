@@ -10,6 +10,7 @@ Emine Senkardesler, University of Illinois Champagne-Urbana
 Okikiola (Michael) Alegbeleye, Washington State University  
 Pratyush Tripathy, University of Santa Barbara, California  
 Surabhi Upadhyay, Colorado School of Mines  
+Team Lead: Jennifer Marlon, Yale Center for Geospatial Solutions  
 
 ## Project Resources
 
