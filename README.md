@@ -5,11 +5,11 @@
 This repository holds data, code, and documentation for the I-GUIDE Team 1 project.
 
 ## About the Team
-Deepika Pingali, University of Illinois Champagne-Urbana
-Emine Senkardesler, University of Illinois Champagne-Urbana
-Okikiola (Michael) Alegbeleye, Washington State University
-Pratyush Tripathy, University of Santa Barbara, California
-Surabhi Upadhyay, Colorado School of Mines
+Deepika Pingali, University of Illinois Champagne-Urbana  
+Emine Senkardesler, University of Illinois Champagne-Urbana  
+Okikiola (Michael) Alegbeleye, Washington State University  
+Pratyush Tripathy, University of Santa Barbara, California  
+Surabhi Upadhyay, Colorado School of Mines  
 
 ## Project Resources
 
