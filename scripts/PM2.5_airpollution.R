@@ -212,7 +212,8 @@ corrplot(cor(corpoll))
 # 7a. Write output #### 
 #------------------------------------------------------------------------------#
 
-write.csv(poll, file = "India-IGUIDE/datafiles/poll_df/full_airpollution.csv", row.names=F)
+poll_subset <- poll %>% dplyr::select(caseid,pm2.5_state,pm2.5_district) %>% arrange(caseid)
+write.csv(poll_subset, file = "India-IGUIDE/datafiles/poll_df/full_airpollution.csv", row.names=F)
 
 #------------------------------------------------------------------------------#
 # 7b. Map #### --> NOT WORKING
