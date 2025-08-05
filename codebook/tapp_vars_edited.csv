@@ -1,0 +1,83 @@
+Varname,Question,Construct,Type,Lable
+caseid,uid,metadata,numeric,user id
+wave,wave,metadata,factor,wave
+weight,weight,metadata,numeric,weight (overall)
+weight_update,weight_update,metadata,numeric,unknown
+weight_update_long,weight_update_long,metadata,numeric,unknown
+date,date,metadata,character,date of survey date
+language,ri6,demographic,factor,language of interview
+state,rf5,demographic,factor,state
+district,d1,demographic,character,district
+assembly,a1,demographic,character,assembly name
+assembly_no,ac_no,demographic,character,assembly number
+meta_interviewer_id,rf2,metadata,character,unique interviewer id
+meta_loi,loi,metadata,character,length of the interview
+age,q35y11,demographic,character,what is your age? (in completed years)
+age_group,age,demographic,factor,age (categorical)
+gender,q36y11,demographic,factor,gender
+edu,q37y11,demographic,factor,up to what level have you studied?
+income,c5y11,demographic,factor,monthly family income
+caste,q39y11,demographic,factor,and what is your caste group?
+religion,q40y11,demographic,factor,what is your religion?
+last_vote,c9y22,demographic,factor,which party did you vote for in 2019 lok sabha elections?
+urban_rural,c18y22,demographic,factor,location
+gw_know_how_much,q14y11,gw,factor,"how much do you know about global warming? do you know a lot about it, something about it, just a little about it, or have you never heard of it?"
+gw_hap,q16y11,gw,factor,"global warming refers to the idea that the world’s average temperature has been increasing over the past 150 years, may be increasing more in the future, and that the world’s climate and weather patterns may change as a result. what do you think? do you think that global warming is happening?  would you say ‘yes’, ‘no’, or ‘i don’t know’?"
+gw_cause,q17y11,gw,factor,"if global warming is happening, do you think it is caused mostly by human activities, by natural changes in the environment, some other cause, or none of these because it is not happening?"
+gw_cause_oth,q17y11_oth,gw,character,other (please specify)
+gw_worried,q18y11,gw,factor,"how worried are you about global warming? would you say you are very worried, somewhat worried, not very worried, or not at all worried?"
+gw_harm_fam,q19ay11,gw,factor,"how much do you think global warming will harm [xxxx]? would you say a great deal, a moderate amount, only a little, not at all, or do you not know? - you and your family"
+gw_harm_comm,q19by11,gw,factor,"how much do you think global warming will harm [xxxx]? would you say a great deal, a moderate amount, only a little, not at all, or do you not know? - people in your community"
+gw_harm_india,q19cy11,gw,factor,"how much do you think global warming will harm [xxxx]? would you say a great deal, a moderate amount, only a little, not at all, or do you not know? - people in india"
+gw_harm_future,q19dy11,gw,factor,"how much do you think global warming will harm [xxxx]? would you say a great deal, a moderate amount, only a little, not at all, or do you not know? - future generations of people"
+gw_harm_flora_fauna,q19ey11,gw,factor,"how much do you think global warming will harm [xxxx]? would you say a great deal, a moderate amount, only a little, not at all, or do you not know? - plant and animal species"
+gw_imp_pers,q22y11,gw,factor,"how important is the issue of global warming to you personally? would you say it is extremely important, very important, somewhat important, not very important, or not at all important?"
+gw_exp_pers,q23by11,gw,factor,"do you strongly agree, somewhat agree, somewhat disagree, or strongly disagree with the following statement? - i have personally experienced the effects of global warming."
+gw_do_more_govt,q25y11,gw,factor,"do you think the government of india should be doing much more, more, less, or much less to address global warming, or is it currently doing the right amount?"
+fuel_new,q61y24_r,demographic,factor,what type of fuel does your household mainly use for cooking?
+n7ay23,n7ay23,weather_impact,factor,"how worried are you that the following might harm your local area? are you very worried, moderately worried, not very worried or not at all worried? - severe cyclones"
+n7by23,n7by23,weather_impact,factor,"how worried are you that the following might harm your local area? are you very worried, moderately worried, not very worried or not at all worried? - extinctions of plant and animal species"
+n7cy23,n7cy23,weather_impact,factor,"how worried are you that the following might harm your local area? are you very worried, moderately worried, not very worried or not at all worried? - famines and food shortages"
+n7dy23,n7dy23,weather_impact,factor,"how worried are you that the following might harm your local area? are you very worried, moderately worried, not very worried or not at all worried? - droughts and water shortages"
+n7ey23,n7ey23,weather_impact,factor,"how worried are you that the following might harm your local area? are you very worried, moderately worried, not very worried or not at all worried? - severe heat waves"
+n7fy23,n7fy23,weather_impact,factor,"how worried are you that the following might harm your local area? are you very worried, moderately worried, not very worried or not at all worried? - severe floods"
+n7gy23,n7gy23,weather_impact,factor,"how worried are you that the following might harm your local area? are you very worried, moderately worried, not very worried or not at all worried? - severe air pollution"
+n7hy23,n7hy23,weather_impact,factor,"how worried are you that the following might harm your local area? are you very worried, moderately worried, not very worried or not at all worried? - agricultural pests and diseases"
+n7iy23,n7iy23,weather_impact,factor,"how worried are you that the following might harm your local area? are you very worried, moderately worried, not very worried or not at all worried? - severe storms"
+n7ky23,n7ky23,weather_impact,factor,electricity power outages
+n7ly23,n7ly23,weather_impact,factor,water pollution
+n13y23,n13y23,weather_impact,factor,"how much, if at all, do you think global warming is affecting the weather in your local area?"
+n21y23,n21y23,action,factor,"when an extreme weather event (such as a heatwave, flood, or cyclone) happens in your local area, do you usually receive a warning about it ahead of time?"
+n23ay24,n23ay24,experience,factor,"i am going to read you a list of hazards and ask if you have personally experienced them in the past 12 months. in the past 12 months, have you personally experienced… - severe cyclones"
+n23cy24,n23cy24,experience,factor,"i am going to read you a list of hazards and ask if you have personally experienced them in the past 12 months. In the past 12 months, have you personally experienced… - famines and food shortages"
+n23dy24,n23dy24,experience,factor,"i am going to read you a list of hazards and ask if you have personally experienced them in the past 12 months. in the past 12 months, have you personally experienced… - droughts and water shortages"
+n23ey24,n23ey24,experience,factor,"i am going to read you a list of hazards and ask if you have personally experienced them in the past 12 months. in the past 12 months, have you personally experienced… - severe heat waves"
+n23fy24,n23fy24,experience,factor,"i am going to read you a list of hazards and ask if you have personally experienced them in the past 12 months. in the past 12 months, have you personally experienced… - severe floods"
+n23gy24,n23gy24,experience,factor,"i am going to read you a list of hazards and ask if you have personally experienced them in the past 12 months. in the past 12 months, have you personally experienced… - severe air pollution"
+n23hy24,n23hy24,experience,factor,"i am going to read you a list of hazards and ask if you have personally experienced them in the past 12 months. in the past 12 months, have you personally experienced… - agricultural pests and diseases"
+n23iy24,n23iy24,experience,factor,"i am going to read you a list of hazards and ask if you have personally experienced them in the past 12 months. in the past 12 months, have you personally experienced… - severe storms"
+n23ky24,n23ky24,experience,factor,electricity power outages
+n23ly24,n23ly24,experience,factor,water pollution
+n24ay24,n24ay24,attribution,factor,"how much do you think global warming is affecting the following in india? would you
+say a lot, some, only a little, or not at all? - severe cyclones"
+n24by24,n24by24,attribution,factor,"how much do you think global warming is affecting the following in india? would you
+say a lot, some, only a little, or not at all? - extinctions of plant and animal species"
+n24cy24,n24cy24,attribution,factor,"how much do you think global warming is affecting the following in india? would you
+say a lot, some, only a little, or not at all? - famines and food shortages"
+n24dy24,n24dy24,attribution,factor,"how much do you think global warming is affecting the following in india? would you
+say a lot, some, only a little, or not at all? - droughts and water shortages"
+n24ey24,n24ey24,attribution,factor,"how much do you think global warming is affecting the following in india? would you
+say a lot, some, only a little, or not at all? - severe heat waves"
+n24fy24,n24fy24,attribution,factor,"how much do you think global warming is affecting the following in india? would you
+say a lot, some, only a little, or not at all? - severe floods"
+n24gy24,n24gy24,attribution,factor,"how much do you think global warming is affecting the following in india? would you
+say a lot, some, only a little, or not at all? - severe air pollution"
+n24hy24,n24hy24,attribution,factor,"how much do you think global warming is affecting the following in india? would you
+say a lot, some, only a little, or not at all? - agricultural pests and diseases"
+n24iy24,n24iy24,attribution,factor,"how much do you think global warming is affecting the following in india? would you
+say a lot, some, only a little, or not at all? - severe storms"
+n24jy24,n24jy24,attribution,factor,"how much do you think global warming is affecting the following in india? would you
+say a lot, some, only a little, or not at all? - monsoons"
+n24ky24,n24ky24,attribution,factor,electricity power outages
+n24ly24,n24ly24,attribution,factor,water pollution
+segment,segment,demographic,factor,segmentation
