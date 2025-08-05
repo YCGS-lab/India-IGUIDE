@@ -1,13 +1,25 @@
-This repository holds data, code, and documentation for the I-GUIDE Team 1 project (week of Aug. 4, 2025).
-Some relevant resources are here:
+# I-GUIDE Team 1 Project
 
-Project Resources
-I-Guide platform - https://platform.i-guide.io/
-I-Guide participant handbook - https://docs.google.com/document/d/1Y-hVwu7rlP7QKm54NZGW3EZr9wvbcyDYnCEHNUCbFeg/edit?tab=t.bomufwqwonku#heading=h.5jyqiysv47e3
-India Climate Opinion Maps - https://climatecommunication.yale.edu/visualizations-data/ycomindia/
-Data and metadata cards and project management - https://github.com/ptdarch/I-GUIDE-DET
+**Week of August 4, 2025**
 
-Coding resources:
-Claude Code - https://www.anthropic.com/claude-code
-AlphaEarth - https://deepmind.google/discover/blog/alphaearth-foundations-helps-map-our-planet-in-unprecedented-detail/
+This repository holds data, code, and documentation for the I-GUIDE Team 1 project.
+
+## Project Resources
+
+### Platform & Documentation
+- [I-Guide Platform](https://platform.i-guide.io/)
+- [I-Guide Participant Handbook](https://docs.google.com/document/d/1Y-hVwu7rlP7QKm54NZGW3EZr9wvbcyDYnCEHNUCbFeg/edit?tab=t.bomufwqwonku#heading=h.5jyqiysv47e3)
+
+### Data Sources
+- [India Climate Opinion Maps](https://climatecommunication.yale.edu/visualizations-data/ycomindia/)
+- [Data and Metadata Cards & Project Management](https://github.com/ptdarch/I-GUIDE-DET)
+
+## Coding Resources
+
+- [Claude Code](https://www.anthropic.com/claude-code) - Command line tool for agentic coding
+- [AlphaEarth](https://deepmind.google/discover/blog/alphaearth-foundations-helps-map-our-planet-in-unprecedented-detail/) - Foundations for mapping our planet
+
+---
+
+*For questions or contributions, please refer to the project documentation or contact the team leads.*
 
