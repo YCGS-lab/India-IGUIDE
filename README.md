@@ -30,7 +30,10 @@ Team Lead: Jennifer Marlon, Yale Center for Geospatial Solutions
 
 - [Claude Code](https://www.anthropic.com/claude-code) - Command line tool for agentic coding
 - [AlphaEarth](https://deepmind.google/discover/blog/alphaearth-foundations-helps-map-our-planet-in-unprecedented-detail/) - Foundations for mapping our planet
-- [Orange](https://orangedatamining.com/) - No-code visual tool for machine learning  
+- [Orange](https://orangedatamining.com/) - No-code visual tool for machine learning
+- [Twitter dataset](https://platform.i-guide.io/datasets/07406d19-b8a3-48f5-ab21-73a7af85e26c) - Notebook for obtaining data
+- [Twitter sentiment analysis](https://platform.i-guide.io/notebooks/bb14c9ea-9b19-49e1-8d5f-a6ea0cbdd921) - Notebook for processing Twitter data
+
 
 ---
 
