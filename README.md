@@ -10,7 +10,9 @@ Emine Senkardesler, University of Illinois Champagne-Urbana
 Okikiola (Michael) Alegbeleye, Washington State University  
 Pratyush Tripathy, University of Santa Barbara, California  
 Surabhi Upadhyay, Colorado School of Mines  
+Data scientist: Emily Goddard, Yale Program on Climate Change Communication
 Team Lead: Jennifer Marlon, Yale Center for Geospatial Solutions  
+
 
 ## Project Resources
 
