@@ -1,0 +1,30 @@
+project:
+  type: website
+  title: "RAP Framework"
+  output-dir: _site
+
+format:
+  html:
+    toc: true
+    toc-depth: 2        # show up to H2/H3 only (see step 2)
+    number-sections: false
+
+website:
+  sidebar:
+    style: "floating"
+    search: true
+    contents:
+      - href: 00_RAP_Framework_Overview.ipynb
+        text: Overview
+      - section: Data
+        contents:
+          - 01_Data.ipynb
+      - section: Model
+        contents:
+          - 02_Model.ipynb
+      - section: Results
+        contents:
+          - 03_Plots.ipynb
+
+resources:
+  - "https://i-guide.io/wp-content/themes/iguide-v2/assets/images/logo-color.png"
