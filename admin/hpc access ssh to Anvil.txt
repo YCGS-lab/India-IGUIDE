@@ -1,0 +1,47 @@
+
+IGUIDE Anvil access codes:
+
+Create SSH key and login using instructions from the handbook:
+https://docs.google.com/document/d/1Y-hVwu7rlP7QKm54NZGW3EZr9wvbcyDYnCEHNUCbFeg/edit?tab=t.bomufwqwonku#heading=h.5jyqiysv47e3
+
+NOTE: Never install anything in the base environment.
+
+\\CODE to get into Anvil
+
+\\SSH into Anvil login node
+ssh -i /Users/jrm236/.ssh/id_ed25519 x-jmarlon@anvil.rcac.purdue.edu
+
+\\SSH into compute node (from inside login node - both Mac and Windows work):
+sinteractive -p shared -N 1 -n 1 -A cis250634
+
+\\copy path from Anvil and paste into terminal:
+cd /anvil/projects/x-cis250634/team1
+mamba env list
+mamba activate ptenv
+
+\\ set up environment
+bash
+ls
+mamba env create -f ptenv.yml
+mamba activate ptenv
+python
+
+>>>import geopandas
+>>>exit()
+
+$pip install exactextract
+
+
+\\or
+mamba create -n ptenv
+mamba env list
+(base) x-jmarlon@a180.anvil:[setup] $ mamba activate ptenv
+(ptenv) x-jmarlon@a180.anvil:[setup] $
+
+\\Note that I have two environments now, base and ptenv
+conda install geopandas
+python3
+import geopandas
+exit()
+
+

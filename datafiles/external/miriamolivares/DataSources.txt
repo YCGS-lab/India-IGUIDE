@@ -1,0 +1,13 @@
+http://projects.datameet.org/indian_village_boundaries/
+
+https://sedac.ciesin.columbia.edu/data/set/india-india-village-level-geospatial-socio-econ-1991-2001
+
+http://gis.harvard.edu/resources/data/india-gis-data
+
+http://www.gis.harvard.edu/services/blog/indian-air-pollution-data
+
+http://bhuvan.nrsc.gov.in/gis/thematic/index.php 
+
+http://projects.datameet.org/maps/assembly-constituencies/#attribute 
+
+http://projects.datameet.org/maps/parliamentary-constituencies/ 

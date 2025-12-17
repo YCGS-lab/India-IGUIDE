@@ -1,0 +1,7 @@
+MIT GeoWEB
+
+https://idp.touchstonenetwork.net/cams/CreateAccount.action
+
+https://idp.touchstonenetwork.net/idp/profile/SAML2/Redirect/SSO?execution=e1s1
+
+https://idp.touchstonenetwork.net/cams/terms
