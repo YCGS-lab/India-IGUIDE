@@ -14,8 +14,8 @@ library(sf)
 library(rnaturalearth)
 
 # ---- 1) Point this to your folder ----
-root <- "~/YSE Dropbox/Jennifer Marlon/YCGS_projects/DataTools/MetaYPCCC/"
-data_dir <- paste0(root, "India/population_ind_pak_women")  # <-- CHANGE ME
+root <- "~/Documents/GitHub/data/"
+data_dir <- paste0(root, "population_ind_pak_women")  # <-- CHANGE ME
 
 # If you have a VRT, use it (best option: no manual mosaicking)
 vrt_path <- file.path(data_dir, "your_population_tiles.vrt")  # <-- CHANGE NAME
@@ -67,7 +67,7 @@ countries <- ne_countries(scale = "medium", returnclass = "sf")
 countries_sub <- countries[countries$admin %in% c("Pakistan", "India"), ]
 
 # ---- 7) Map ----
-pA <- ggplot() +
+p1 <- ggplot() +
   geom_raster(data = df, aes(x = lon, y = lat, fill = value)) +
   geom_sf(data = countries_sub, fill = NA, linewidth = 0.5) +
   coord_sf(xlim = c(60, 100), ylim = c(5, 40), expand = FALSE) +
@@ -83,11 +83,11 @@ pA <- ggplot() +
   theme_minimal()
 
 png("~/Documents/GitHub/India-IGUIDE/output/high-res-pop-basemap.png", width = 1800, height = 1200, res = 300)
-print(pA)
+print(p1)
 dev.off()
 
 
-# ---- 8) If you want the original (non-log) map, swap df creation:
+# If you want the original (non-log) map, swap df creation:
 # df2 <- as.data.frame(pop_roi, xy = TRUE, na.rm = TRUE)
 # names(df2) <- c("lon","lat","value")
 # then use df2 in geom_raster and set scale_fill_viridis_c(name="Population")
