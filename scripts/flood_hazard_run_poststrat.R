@@ -1,8 +1,18 @@
 rm(list=ls())
 library(openxlsx)
+library(sf)
+library(ggtext)
 
 # Set parameters
-col_vars <- c("gender", "age", "caste", "urban") 
+demo_vars <- c("gender", "age", "caste", "urban") 
+col_vars <- demo_vars
+if(length(demo_vars)>1){
+  for(k in 2:length(demo_vars)){
+    temp_vars <- paste0(utils::combn(demo_vars, k, paste0, collapse = "_"))
+    col_vars <- c(col_vars, temp_vars)
+  }
+}
+
 column_name <- "state_dist_code"
 # target_time <- 2024
 xsim=FALSE
@@ -10,16 +20,39 @@ xsim=FALSE
 # Load File Paths
 github <- paste0("~/GitHub/ypccc_india/india_w1.5/")
 dropbox <- "~/Dropbox (YSE)/ypcccdb/downscale/india/"
+outdir <- "/Users/eag82/YSE Dropbox/Emily Goddard/India-IGUIDE/output_flood/"
 temp <- paste0(github,"temp/")
 xwalks <- paste0(temp,"xwalks/")
 
 # Load Files
 # xwalk_state <- read_excel(paste0(xwalks,"xwalk_state.xlsx"))
+load("/Users/eag82/GitHub/ypccc_us/_data/xwalks/india/output/xwalk_full.rda")
 key <- read.xlsx(paste0(xwalks,"xwalk_district.xlsx"))
 model <- readRDS("/Users/eag82/GitHub/India-IGUIDE/scripts/best_model.rds")
-df <- readRDS("/Users/eag82/GitHub/ypccc_india/india_w1/iguide/datafiles/02162025/Severe_floods.rds")
+# poll <- read.csv("/Users/eag82/GitHub/ypccc_india/india_w1/iguide/datafiles/Poll_Severe_floods.csv")
+poll <- read.csv("/Users/eag82/Downloads/RAP_Flood_merged_all_updated_20260227.csv")
+df <- read.csv("/Users/eag82/Downloads/district_wise_covars_flood.csv")
+load("/Users/eag82/GitHub/ypccc_india/india_w1.5/temp/df_district.rda")
+# df1 <- read.csv("/Users/eag82/GitHub/ypccc_india/india_w1/iguide/datafiles/Severe_floods.csv")
+# df_model <- read.csv("/Users/eag82/GitHub/ypccc_india/india_w1/iguide/datafiles/final_data_for_modelling.csv")
 
-# df$di_code <- df$state_district_survey
+df$di_code <- ifelse(nchar(df$di_code)==1, paste0("00",df$di_code),
+                     ifelse(nchar(df$di_code)==2, paste0("0",df$di_code), as.character(df$di_code)))
+
+setdiff(key$district_shape23_code, df$di_code)
+setdiff(df$di_code, key$district_shape23_code)
+
+setdiff(df_district$state_dist_code, key$state_dist_code)
+setdiff(key$state_dist_code, df_district$state_dist_code)
+
+colnames(df)[colnames(df)=="N"] <- "count"
+
+# Merge Data
+df <- base::merge(df, key, by.x="di_code",by.y="district_shape23_code", all.y=TRUE)
+df <- base::merge(df, df_district, by=c("state_dist_code","state_code","district_code"), all.x=TRUE)
+
+
+rm(df_district)
 
 #### 0. Set seed ####
 set.seed(2496)
@@ -29,9 +62,15 @@ set.seed(2496)
 
 #### 2. List codes ####
 geocode <- levels(as.factor(df$GEOID))
+df <- df %>%
+  dplyr::select(-state_shape23, -state_shape23_code, -state_census11, 
+                -district_census11, -state_district_census11, -state_census11_code, 
+                -district_census11_code, -district_shape23, -state_district_shape23, 
+                -zone, -state_dist, -district, -state, -country)
+df_model <- as.matrix(df)
 
 #### 3. Create new prediction code using new predict() functionality for merMod objects ####
-cellpred <- predict(model,df,type="response",allow.new.levels=TRUE)
+cellpred <- predict(model,df_model,type="response",allow.new.levels=TRUE, params = list(predict_disable_shape_check = TRUE))
 
 #### 4. Weight prediction by frequency of cell (not currently used) ####
 cellpredweighted <- cellpred*df$n_pct_geo
@@ -70,7 +109,7 @@ pred.total <- data.frame(sum(df$n, na.rm=TRUE),
 names(pred.total) <- c("national.n", "national.pred.n", "national.pred.prop", "national.pred.lower", "national.pred.upper")
 
 #### 9. Combine to dataframe ####
-df2 <- cbind(df, cellpredweighted, cellpred, cellpred_n, cellpred_n_lower, cellpred_n_upper)
+df2 <- cbind(df, cellpredweighted, cellpred, cellpred_n) #, cellpred_n_lower, cellpred_n_upper
 
 #### 10. Create columns for all demographic variables and combinations ####
 if(length(col_vars)>1){
@@ -112,12 +151,12 @@ for(j in 1:length(col_vars)){
 }
 
 #### 12. Aggregate predictions at geography level ####
-pred_area                 <- aggregate(df2[,c("n", "cellpred_n", "cellpred_n_lower", "cellpred_n_upper")], list(df2$GEOID), FUN=sum, na.rm=TRUE)
+pred_area                 <- aggregate(df2[,c("n", "cellpred_n")], list(df2$GEOID), FUN=sum, na.rm=TRUE) #"cellpred_n_lower", "cellpred_n_upper"
 pred_area$pred_prop       <- pred_area$cellpred_n / pred_area$n
-pred_area$pred_prop_lower <- pred_area$cellpred_n_lower / pred_area$n
-pred_area$pred_prop_upper <- pred_area$cellpred_n_upper / pred_area$n
+# pred_area$pred_prop_lower <- pred_area$cellpred_n_lower / pred_area$n
+# pred_area$pred_prop_upper <- pred_area$cellpred_n_upper / pred_area$n
 pred_area$pred_per        <- pred_area$pred_prop*100
-pred_area$moe             <- (pred_area$pred_prop_upper - pred_area$pred_prop_lower)/2
+# pred_area$moe             <- (pred_area$pred_prop_upper - pred_area$pred_prop_lower)/2
 
 #### 13. Merge names and FIPS codes ####
 pred_area <- base::merge(key, pred_area, by.x=column_name, by.y="Group.1", all=TRUE)
@@ -130,24 +169,24 @@ pred_area_list <- list()
 pred_total_list <- list()
 for(j in 1: length(cols2)){
   # 14.1 Calculate area-specific predictions
-  pred_area_list[[j]]                         <- aggregate(df2[,c("n", "cellpred_n", "cellpred_n_lower", "cellpred_n_upper")], list(df2[,colnames(df2)==column_name], df2[,cols2[j]]), FUN=sum, na.rm=TRUE)
+  pred_area_list[[j]]                         <- aggregate(df2[,c("n", "cellpred_n")], list(df2[,colnames(df2)==column_name], df2[,cols2[j]]), FUN=sum, na.rm=TRUE) #, "cellpred_n_lower", "cellpred_n_upper"
   pred_area_list[[j]]$pred_prop               <- pred_area_list[[j]]$cellpred_n / pred_area_list[[j]]$n
-  pred_area_list[[j]]$pred_prop_lower         <- pred_area_list[[j]]$cellpred_n_lower / pred_area_list[[j]]$n
-  pred_area_list[[j]]$pred_prop_upper         <- pred_area_list[[j]]$cellpred_n_upper / pred_area_list[[j]]$n
+  # pred_area_list[[j]]$pred_prop_lower         <- pred_area_list[[j]]$cellpred_n_lower / pred_area_list[[j]]$n
+  # pred_area_list[[j]]$pred_prop_upper         <- pred_area_list[[j]]$cellpred_n_upper / pred_area_list[[j]]$n
   pred_area_list[[j]]$pred_per                <- pred_area_list[[j]]$pred_prop*100
-  pred_area_list[[j]]$moe                     <- (pred_area_list[[j]]$pred_prop_upper - pred_area_list[[j]]$pred_prop_lower)/2
+  # pred_area_list[[j]]$moe                     <- (pred_area_list[[j]]$pred_prop_upper - pred_area_list[[j]]$pred_prop_lower)/2
   
   # 14.2 Merge with key
   names(pred_area_list[[j]])[1] <- column_name
   pred_area_list[[j]] <- base::merge(key, pred_area_list[[j]], by=column_name, all=TRUE)
   
   # 14.3 Calculate total (national) predictions
-  pred_total_list[[j]]                         <- aggregate(df2[,c("n", "cellpred_n", "cellpred_n_lower", "cellpred_n_upper")], list(df2[,col_vars[j]]), FUN=sum, na_rm=TRUE)
+  pred_total_list[[j]]                         <- aggregate(df2[,c("n", "cellpred_n")], list(df2[,col_vars[j]]), FUN=sum, na_rm=TRUE) #, "cellpred_n_lower", "cellpred_n_upper"
   pred_total_list[[j]]$pred_prop               <- pred_total_list[[j]]$cellpred_n / pred_total_list[[j]]$n
-  pred_total_list[[j]]$pred_prop_lower         <- pred_total_list[[j]]$cellpred_n_lower / pred_total_list[[j]]$n
-  pred_total_list[[j]]$pred_prop_upper         <- pred_total_list[[j]]$cellpred_n_upper / pred_total_list[[j]]$n
+  # pred_total_list[[j]]$pred_prop_lower         <- pred_total_list[[j]]$cellpred_n_lower / pred_total_list[[j]]$n
+  # pred_total_list[[j]]$pred_prop_upper         <- pred_total_list[[j]]$cellpred_n_upper / pred_total_list[[j]]$n
   pred_total_list[[j]]$pred_per                <- pred_total_list[[j]]$pred_prop*100
-  pred_total_list[[j]]$moe                     <- (pred_total_list[[j]]$pred_prop_upper - pred_total_list[[j]]$pred_prop_lower)/2
+  # pred_total_list[[j]]$moe                     <- (pred_total_list[[j]]$pred_prop_upper - pred_total_list[[j]]$pred_prop_lower)/2
 }
 names(pred_area_list) <- cols2
 names(pred_total_list) <- col_vars
@@ -155,3 +194,299 @@ names(pred_total_list) <- col_vars
 #### 15. Return output ####
 pred <- list(df2, pred_area)
 data_list <- list(pred, pred_total_list, pred_area_list)
+
+areapred <- data_list[[1]][[2]]
+pred_total_demo <- data_list[[2]]
+pred_area_demo <- data_list[[3]]
+
+#### 1. Sum at national level for difference plots ####
+national_n                                <- sum(areapred$n, na.rm=TRUE)
+national_cellpred_n                       <- sum(areapred$cellpred_n, na.rm=TRUE)
+national_prop                             <- national_cellpred_n / national_n
+national_per                              <- national_prop*100
+# national_pred_prop_upper                  <- sum(areapred$pred_prop_upper, na.rm=TRUE)
+# national_pred_prop_lower                  <- sum(areapred$pred_prop_lower, na.rm=TRUE)
+# national_moe                              <- (national_pred_prop_upper - national_pred_prop_lower)/2
+areapred$national_per                     <- national_per
+areapred$pred_prop[areapred$pred_prop==0] <- national_prop
+
+#### 2. Create national dataframe ####
+natpred <- cbind("us",national_n,national_cellpred_n,national_prop,national_per) #,national_pred_prop_upper,national_pred_prop_lower,national_moe
+colnames(natpred) <- c("country","n","cellpred_n","pred_prop","pred_per") #,"pred_prop_upper","pred_prop_lower","moe"
+
+#### 3. Calculate difference from national average for each area ####
+areapred$pred_per_diff <- areapred$pred_per - national_per
+
+for(i in 1:length(pred_area_demo)){
+  pred_area_demo[[i]]$temp <- gsub("[0-9]._", "",pred_area_demo[[i]]$Group.2)
+  for(j in 1:length(unique(pred_total_demo[[i]]$Group.2))){
+    predvar <- pred_total_demo[[i]]$Group.2[j]
+    pred_area_demo[[i]]$pred_per_diff[pred_area_demo[[i]]$temp==predvar] <- pred_area_demo[[i]]$pred_per[pred_area_demo[[i]]$temp==predvar] - pred_total_demo[[i]]$pred_per[pred_total_demo[[i]]$Group.2==predvar]
+  }
+  pred_area_demo[[i]]$temp <- NULL
+}
+
+areapred_write <- areapred %>%
+  dplyr::mutate(GeoName = display_name,
+                GeoID = state_dist_code,
+                state = str_to_title(state_shape23)) %>%
+  dplyr::select(GeoName, GeoID, state, zone, n, cellpred_n, pred_prop, pred_per, national_per, pred_per_diff)
+
+#### 4. Save geography files ####
+if(dir.exists(paste0(outdir))==FALSE){
+  dir.create(paste0(outdir), recursive=TRUE)
+}
+write.csv(areapred_write, file=paste0(outdir,"flood_table.csv"), row.names = FALSE)
+save(areapred_write, file=paste0(outdir,"flood_table.Rda"))
+
+#### 5. Save country files ####
+# if(level=="state"){
+#   if(dir.exists(paste0(outdir,"country/", var, "/"))==FALSE){
+#     dir.create(paste0(outdir,"country/", var, "/"), recursive=TRUE)
+#   }
+#   write.csv(natpred, file=paste0(outdir,"country/", var, "/", var, "_country_", time, "_table.csv"), row.names = FALSE)
+#   save(natpred, file=paste0(outdir,"country/", var, "/",var,"_country_", time, ".Rda"))
+# }
+
+#### 6. Save demographic breakdowns ####
+# for(i in 1:length(pred_area_demo)){
+#   demo <- names(pred_total_demo)[i]
+#   write.csv(pred_area_demo[[i]], file=paste0(outdir,"tables/",demo,"_flood_table.csv"), row.names = FALSE)
+# }
+# for(i in 1:length(pred_total_demo)){
+#   demo <- names(pred_total_demo)[i]
+#   write.csv(pred_total_demo[[i]], file=paste0(outdir,level,"/",var,"/",var,"_country_",demo,"_",time,"_table.csv"), row.names = FALSE)
+# }
+
+#==============================================================================#
+# 1.0 Set Map Parameters
+#==============================================================================#
+# Lines between sub-country geographies
+linecol   <- "white"
+linewidth <- 0.1
+
+# Legend breaks and colors
+breaks <- seq(0,100,5)
+legendlab <- paste0("Estimated % of population, 2011")
+map.palette <- rev(c("(95,100]"="#450847",
+                     "(90,95]"="#6e123d",
+                     "(85,90]"="#921c33",
+                     "(80,85]"="#bf272a",
+                     "(75,80]"="#cb612e",
+                     "(70,75]"="#ed914c",
+                     "(65,70]"="#f1ab62",
+                     "(60,65]"="#f4c579",
+                     "(55,60]"="#f7d990",
+                     "(50,55]"="#fdeca7",
+                     "(45,50]"="#e1ebf6",
+                     "(40,45]"="#becee3",
+                     "(35,40]"="#9eb1d0",
+                     "(30,35]"="#8098bd",
+                     "(25,30]"="#667eac",
+                     "(20,25]"="#4e669a",
+                     "(15,20]"="#395188",
+                     "(10,15]"="#283e75",
+                     "(5,10]"="#1a2b65",
+                     "(0,5]"="#0c1b54"))
+
+#==============================================================================#
+# 2.0 Load the Data
+#==============================================================================#
+# Stacked Data
+district <- areapred %>%
+  dplyr::rename(ShapeName = state_district_shape23) %>%
+  # dplyr::mutate(ShapeID = paste0("x",state_dist_code)) %>%
+  dplyr::select(ShapeName, n, cellpred_n, pred_prop, pred_per, national_per, pred_per_diff)
+
+# Long Data
+# df_downscale <- read.csv(paste0(tables,"india_downscale",wave,"_",year,"_fullstack_long_",nvars,".csv"))
+# district2  <- df_downscale[df_downscale$GeoType=="district",]
+
+# Load the shapefiles that Martial is using:
+shape_district <- read_sf(dsn=paste0("~/GitHub/ypccc_us/_data/external/india/shapefiles/2023/output"), layer=paste0("district_state_shapefile_2023"))
+
+#==============================================================================#
+# 3.0 Reformat Shapefiles
+#==============================================================================#
+# District
+shape_district <- shape_district %>%
+  dplyr::rename(ShapeName = GeoName,
+                ShapeID = GEOID) %>%
+  dplyr::select(ShapeName, ShapeID, geometry)
+
+#==============================================================================#
+# 4.0 Merge Data onto Shapefiles
+#==============================================================================#
+# Merge Shapefiles and Data
+shape_merge    <- base::merge(shape_district, district, by=c("ShapeName"), all=TRUE)
+
+#==============================================================================#
+# 4.0 Loop Over Each Question to Create Maps ###
+#==============================================================================#
+# Loop over geographies (country, state, district)
+data <- shape_merge
+geog <- "district"
+
+# Format & Subset Data
+df <- data %>%
+  dplyr::mutate(pred_per = as.numeric(pred_per))
+
+df <- df %>%
+  dplyr::mutate(pred_per = as.numeric(pred_per)) %>%
+  dplyr::mutate(pred_bin = cut(df$pred_per, breaks=breaks)) %>%
+  dplyr::select(ShapeID, ShapeName, pred_per, pred_bin, geometry) %>% #GeoID, GeoName, Population, 
+  dplyr::distinct()
+
+nat_avg <- round(mean(df$pred_per, na.rm=TRUE),0)
+
+# Create secondary dataframe to view all legend options
+df2 <- df[1,c("ShapeID","ShapeName","pred_bin","geometry")]
+df2 <- df2[rep(seq_len(nrow(df2)), each = 20),]
+df2$pred_bin[1:20] <- c("(95,100]","(90,95]","(85,90]","(80,85]","(75,80]",
+                        "(70,75]","(65,70]","(60,65]","(55,60]","(50,55]",
+                        "(45,50]","(40,45]","(35,40]","(30,35]","(25,30]",
+                        "(20,25]","(15,20]","(10,15]","(5,10]","(0,5]")
+
+# Find centroids for placing text (rounded percents)
+df3 <- sf::st_centroid(df)
+df3 <- data.frame(sf::st_coordinates(df3))
+df3 <- df3 %>% 
+  dplyr::select(X, Y)
+df3$pred_per <- df$pred_per
+df3$ShapeName <- df$ShapeName
+df3$label <- round(df3$pred_per,0)
+
+# Identify title & text
+plot_title <- paste0("Worry about severe floods (National Average: ",nat_avg,"%)")
+plot_text <- paste0(lapply(strwrap("How worried are you that severe floods might harm your local area? are you very worried, moderately worried, not very worried or not at all worried?",width=100,
+                                   simplify=FALSE), paste, collapse="<br>"),
+                    collapse = "<br>")
+
+# Set output file path
+outpath  <- paste0("/Users/eag82/YSE Dropbox/Emily Goddard/India-IGUIDE/output_flood/district_flood_worry.png")
+
+# Create Map
+p <- ggplot(data)+
+  geom_sf(data=df2, aes(fill=pred_bin), color=linecol, size=linewidth)+
+  geom_sf(data=df, aes(fill=pred_bin), color=linecol, size=linewidth)+
+  scale_fill_manual(values=map.palette, name=legendlab, na.value="darkgray", drop=FALSE)+
+  # geom_text(data=df3, aes(X,Y,label=label), size=1, color=ifelse((as.numeric(df3$pred_per)<25|as.numeric(df3$pred_per)>85)&!grepl("Islands|Lakshadweep",df3$GeoName), "white", "black"))+
+  guides(fill=guide_legend(title.position="top", keyheight=.75, label.hjust=(0)))+
+  coord_sf()+
+  theme_void()+
+  labs(x="",y="", title=plot_title, caption=plot_text)+
+  theme(plot.title = element_text(size=20, face = "bold", hjust = 0), 
+        legend.position="right", 
+        legend.title = element_text(size=16),
+        legend.text = element_text(size=12),
+        plot.caption= element_markdown(size=14, hjust = 0,lineheight = 1.2),
+        plot.margin = margin(0.5, 0.5, 0.5, 0.5, "cm"))
+
+# Print Map
+png(file=outpath, res=300, width=12.5, height=10, units="in")
+print(p)
+dev.off()  
+
+#==============================================================================#
+# 5.0 Loop Over Each Question to Create Difference Maps ###
+#==============================================================================#
+# # Format & Subset Data
+# df <- data %>%
+#   dplyr::mutate(pred_per_diff = as.numeric(pred_per_diff))
+# 
+# df <- df %>%
+#   dplyr::mutate(pred_per_diff = as.numeric(pred_per_diff)) %>%
+#   dplyr::mutate(pred_bin = cut(df$pred_per_diff, breaks=breaks)) %>%
+#   dplyr::select(ShapeID, ShapeName, pred_per_diff, pred_bin, geometry) %>% #GeoID, GeoName, Population, 
+#   dplyr::distinct()
+# 
+# # Create secondary dataframe to view all legend options
+# df2 <- df[1,c("ShapeID","ShapeName","pred_bin","geometry")]
+# df2 <- df2[rep(seq_len(nrow(df2)), each = 20),]
+# df2$pred_bin[1:20] <- c("(95,100]","(90,95]","(85,90]","(80,85]","(75,80]",
+#                         "(70,75]","(65,70]","(60,65]","(55,60]","(50,55]",
+#                         "(45,50]","(40,45]","(35,40]","(30,35]","(25,30]",
+#                         "(20,25]","(15,20]","(10,15]","(5,10]","(0,5]")
+# 
+# # Find centroids for placing text (rounded percents)
+# df3 <- sf::st_centroid(df)
+# df3 <- data.frame(sf::st_coordinates(df3))
+# df3 <- df3 %>% 
+#   dplyr::select(X, Y)
+# df3$pred_per_diff <- df$pred_per_diff
+# df3$ShapeName <- df$ShapeName
+# df3$label <- round(df3$pred_per_diff,0)
+# 
+# # Identify title & text
+# plot_title <- paste0("Worry about severe floods - difference from national average (National Average: ",nat_avg,"%)")
+# plot_text <- paste0(lapply(strwrap("How worried are you that severe floods might harm your local area? are you very worried, moderately worried, not very worried or not at all worried?",width=100,
+#                                    simplify=FALSE), paste, collapse="<br>"),
+#                     collapse = "<br>")
+# 
+# # Set output file path
+# outpath  <- paste0("/Users/eag82/YSE Dropbox/Emily Goddard/India-IGUIDE/output_flood/maps/district_flood_worry.png")
+# 
+# # Create Map
+# p <- ggplot(data)+
+#   geom_sf(data=df2, aes(fill=pred_bin), color=linecol, size=linewidth)+
+#   geom_sf(data=df, aes(fill=pred_bin), color=linecol, size=linewidth)+
+#   scale_fill_manual(values=map.palette, name=legendlab, na.value="darkgray", drop=FALSE)+
+#   guides(fill=guide_legend(title.position="top", keyheight=.75, label.hjust=(0)))+
+#   coord_sf()+
+#   theme_void()+
+#   labs(x="",y="", title=plot_title, caption=plot_text)+
+#   theme(plot.title = element_text(size=20, face = "bold", hjust = 0), 
+#         legend.position="right", 
+#         legend.title = element_text(size=16),
+#         legend.text = element_text(size=12),
+#         plot.caption= element_markdown(size=14, hjust = 0,lineheight = 1.2),
+#         plot.margin = margin(0.5, 0.5, 0.5, 0.5, "cm"))
+# 
+# # Print Map
+# png(file=outpath, res=300, width=12.5, height=10, units="in")
+# print(p)
+# dev.off()  
+
+#==============================================================================#
+# END OF FILE
+#==============================================================================#
+# Loop over each geography level
+# poll$year <- as.numeric(poll$year)
+geo <- "state_district_survey"
+geo2 <- "district"
+
+# Calculate the share of each response for each question
+df1 <- poll %>%
+  dplyr::select(!!sym(geo), weight, n7fy23_recode, wave) %>%
+  dplyr::filter(!is.na(n7fy23_recode))
+
+df1 <- df1 %>% 
+  dplyr::mutate(count = 1) %>% 
+  dplyr::group_by(!!sym(geo), n7fy23_recode) %>%
+  dplyr::summarise(freq = sum(weight), n_obs = sum(count)) %>%
+  dplyr::mutate(n_wgt = sum(freq),
+                prop  = freq/n_wgt,
+                pct   = prop*100,
+                n_obs = sum(n_obs)) %>% 
+  dplyr::ungroup()
+
+df1 <- df1 %>% 
+  dplyr::filter(n7fy23_recode==1) %>% 
+  dplyr::select(state_district_survey, n_obs, freq, n_wgt, prop, pct)
+
+length(unique(df1$state_district_survey))
+for(i in 1:ncol(key)){
+  print(colnames(key)[i])
+  print(length(unique(key[,i])))
+}
+
+areapred <- base::merge(areapred, xwalk, by=c("state_shape23", "state_shape23_code", "state_census11", "district_census11", 
+                                              "state_district_census11", "state_census11_code", "district_census11_code", 
+                                              "district_shape23", "district_shape23_code", "state_district_shape23", 
+                                              "zone"))
+areapred$state_district_survey <- str_to_lower(areapred$state_district_survey)
+
+qa_df <- base::merge(areapred, df1, by="state_district_survey", all.y=TRUE)
+qa_df <- qa_df[qa_df$n_obs>50,]
+qa_df$difference <- qa_df$pred_per - qa_df$pct
+

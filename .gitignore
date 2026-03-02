@@ -3,3 +3,4 @@ scripts/.DS_Store
 shapefiles/.DS_Store
 datafiles/largedata/
 
+.Rproj.user
