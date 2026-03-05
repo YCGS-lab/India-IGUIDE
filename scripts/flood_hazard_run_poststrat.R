@@ -2,6 +2,8 @@ rm(list=ls())
 library(openxlsx)
 library(sf)
 library(ggtext)
+library(stringr)
+library(ggplot2)
 
 # Set parameters
 demo_vars <- c("gender", "age", "caste", "urban") 
@@ -20,21 +22,34 @@ xsim=FALSE
 # Load File Paths
 github <- paste0("~/GitHub/ypccc_india/india_w1.5/")
 dropbox <- "~/Dropbox (YSE)/ypcccdb/downscale/india/"
-outdir <- "/Users/eag82/YSE Dropbox/Emily Goddard/India-IGUIDE/output_flood/"
+outdir <- "~/YSE Dropbox/Emily Goddard/India-IGUIDE/output_flood/"
 temp <- paste0(github,"temp/")
 xwalks <- paste0(temp,"xwalks/")
 
 # Load Files
 # xwalk_state <- read_excel(paste0(xwalks,"xwalk_state.xlsx"))
-load("/Users/eag82/GitHub/ypccc_us/_data/xwalks/india/output/xwalk_full.rda")
+load("~/GitHub/ypccc_us/_data/xwalks/india/output/xwalk_full.rda")
 key <- read.xlsx(paste0(xwalks,"xwalk_district.xlsx"))
-model <- readRDS("/Users/eag82/GitHub/India-IGUIDE/scripts/best_model.rds")
-# poll <- read.csv("/Users/eag82/GitHub/ypccc_india/india_w1/iguide/datafiles/Poll_Severe_floods.csv")
-poll <- read.csv("/Users/eag82/Downloads/RAP_Flood_merged_all_updated_20260227.csv")
-df <- read.csv("/Users/eag82/Downloads/district_wise_covars_flood.csv")
-load("/Users/eag82/GitHub/ypccc_india/india_w1.5/temp/df_district.rda")
-# df1 <- read.csv("/Users/eag82/GitHub/ypccc_india/india_w1/iguide/datafiles/Severe_floods.csv")
-# df_model <- read.csv("/Users/eag82/GitHub/ypccc_india/india_w1/iguide/datafiles/final_data_for_modelling.csv")
+model <- readRDS("~/GitHub/India-IGUIDE/scripts/best_model.rds")
+# poll <- read.csv("~/GitHub/ypccc_india/india_w1/iguide/datafiles/Poll_Severe_floods.csv")
+poll <- read.csv("~/Downloads/RAP_Flood_merged_all_updated_20260227.csv")
+poll2 <- read.csv("~/GitHub/ypccc_india/india_w1/iguide/datafiles/03052026/Severe_floods.csv")
+df <- read.csv("~/Downloads/district_wise_covars_flood.csv")
+load("~/GitHub/ypccc_india/india_w1.5/temp/df_district.rda")
+# df1 <- read.csv("~/GitHub/ypccc_india/india_w1/iguide/datafiles/Severe_floods.csv")
+# df_model <- read.csv("~/GitHub/ypccc_india/india_w1/iguide/datafiles/final_data_for_modelling.csv")
+covars <- read.csv("~/Downloads/covariates.csv")
+df2 <- read.csv("~/Downloads/district_level_spatial_features_covariates.csv")
+
+# Merge polls
+samecols <- colnames(poll)[colnames(poll) %in% colnames(poll2)]
+samecols <- samecols[samecols!="caseid"]
+poll <- poll[, !colnames(poll) %in% samecols]
+poll2 <- poll2[!duplicated(poll2$caseid),]
+poll <- base::merge(poll, poll2, by="caseid", all.x = TRUE)
+# write.csv(poll, file="~/Downloads/poll_flood_updated_03052026.csv")
+
+df <- base::merge(df, df2, by="di_code",all=TRUE)
 
 df$di_code <- ifelse(nchar(df$di_code)==1, paste0("00",df$di_code),
                      ifelse(nchar(df$di_code)==2, paste0("0",df$di_code), as.character(df$di_code)))
@@ -51,8 +66,14 @@ colnames(df)[colnames(df)=="N"] <- "count"
 df <- base::merge(df, key, by.x="di_code",by.y="district_shape23_code", all.y=TRUE)
 df <- base::merge(df, df_district, by=c("state_dist_code","state_code","district_code"), all.x=TRUE)
 
+covars <- trimws(covars$features)
 
-rm(df_district)
+df_orig <- df
+df <- df %>%
+  dplyr::select(all_of(covars))
+
+
+rm(df_district, df2)
 
 #### 0. Set seed ####
 set.seed(2496)
@@ -62,21 +83,21 @@ set.seed(2496)
 
 #### 2. List codes ####
 geocode <- levels(as.factor(df$GEOID))
-df <- df %>%
-  dplyr::select(-state_shape23, -state_shape23_code, -state_census11, 
-                -district_census11, -state_district_census11, -state_census11_code, 
-                -district_census11_code, -district_shape23, -state_district_shape23, 
-                -zone, -state_dist, -district, -state, -country)
+# df <- df %>%
+#   dplyr::select(-state_shape23, -state_shape23_code, -state_census11, 
+#                 -district_census11, -state_district_census11, -state_census11_code, 
+#                 -district_census11_code, -district_shape23, -state_district_shape23, 
+#                 -zone, -state_dist, -district, -state, -country)
 df_model <- as.matrix(df)
 
 #### 3. Create new prediction code using new predict() functionality for merMod objects ####
 cellpred <- predict(model,df_model,type="response",allow.new.levels=TRUE, params = list(predict_disable_shape_check = TRUE))
 
 #### 4. Weight prediction by frequency of cell (not currently used) ####
-cellpredweighted <- cellpred*df$n_pct_geo
+cellpredweighted <- cellpred*df_orig$n_pct_geo
 
 #### 5. Calculate n for each cell ####
-cellpred_n <- cellpred*df$n
+cellpred_n <- cellpred*df_orig$n
 
 #### 6. Create blank confidence intervals ####
 cellpred_n_lower <- 0
@@ -85,8 +106,8 @@ cellpred_n_upper <- 0
 #### 7. Use simulation to estimate confidence intervals ####
 if(xsim==TRUE){
   # split data frame into chunks of 999 rows--this is needed for predictInterval to work properly in its current version 
-  n.splits <- ceiling(length(df$n)/999)
-  df.split <- suppressWarnings(split(df, rep(1:n.splits,each=999)))
+  n.splits <- ceiling(length(df_orig$n)/999)
+  df.split <- suppressWarnings(split(df_orig, rep(1:n.splits,each=999)))
   for(s in 1:n.splits){
     if(s==1){
       cellpred.conf <- suppressWarnings(predictInterval(model, newdata = df.split[[s]], n.sims = n_sims, stat='mean', type='probability', include.resid.var = FALSE, which=c("full")))
@@ -96,20 +117,20 @@ if(xsim==TRUE){
     }
   }
   
-  cellpred_n_lower <- cellpred.conf$lwr*df$n
-  cellpred_n_upper <- cellpred.conf$upr*df$n
+  cellpred_n_lower <- cellpred.conf$lwr*df_orig$n
+  cellpred_n_upper <- cellpred.conf$upr*df_orig$n
 }
 
 #### 8. Calculate national total n and proportion ####
-pred.total <- data.frame(sum(df$n, na.rm=TRUE), 
+pred.total <- data.frame(sum(df_orig$n, na.rm=TRUE), 
                          sum(cellpred_n, na.rm=TRUE), 
-                         sum(cellpred_n, na.rm=TRUE)/sum(df$n, na.rm=TRUE), 
-                         sum(cellpred_n_lower, na.rm=TRUE)/sum(df$n, na.rm=TRUE), 
-                         sum(cellpred_n_upper, na.rm=TRUE)/sum(df$n, na.rm=TRUE))
+                         sum(cellpred_n, na.rm=TRUE)/sum(df_orig$n, na.rm=TRUE), 
+                         sum(cellpred_n_lower, na.rm=TRUE)/sum(df_orig$n, na.rm=TRUE), 
+                         sum(cellpred_n_upper, na.rm=TRUE)/sum(df_orig$n, na.rm=TRUE))
 names(pred.total) <- c("national.n", "national.pred.n", "national.pred.prop", "national.pred.lower", "national.pred.upper")
 
 #### 9. Combine to dataframe ####
-df2 <- cbind(df, cellpredweighted, cellpred, cellpred_n) #, cellpred_n_lower, cellpred_n_upper
+df2 <- cbind(df_orig, cellpredweighted, cellpred, cellpred_n) #, cellpred_n_lower, cellpred_n_upper
 
 #### 10. Create columns for all demographic variables and combinations ####
 if(length(col_vars)>1){
@@ -363,7 +384,7 @@ plot_text <- paste0(lapply(strwrap("How worried are you that severe floods might
                     collapse = "<br>")
 
 # Set output file path
-outpath  <- paste0("/Users/eag82/YSE Dropbox/Emily Goddard/India-IGUIDE/output_flood/district_flood_worry.png")
+outpath  <- paste0("~/YSE Dropbox/Emily Goddard/India-IGUIDE/output_flood/district_flood_worry.png")
 
 # Create Map
 p <- ggplot(data)+
@@ -424,7 +445,7 @@ dev.off()
 #                     collapse = "<br>")
 # 
 # # Set output file path
-# outpath  <- paste0("/Users/eag82/YSE Dropbox/Emily Goddard/India-IGUIDE/output_flood/maps/district_flood_worry.png")
+# outpath  <- paste0("~/YSE Dropbox/Emily Goddard/India-IGUIDE/output_flood/maps/district_flood_worry.png")
 # 
 # # Create Map
 # p <- ggplot(data)+
@@ -489,4 +510,83 @@ areapred$state_district_survey <- str_to_lower(areapred$state_district_survey)
 qa_df <- base::merge(areapred, df1, by="state_district_survey", all.y=TRUE)
 qa_df <- qa_df[qa_df$n_obs>50,]
 qa_df$difference <- qa_df$pred_per - qa_df$pct
+
+
+
+# STATE QA
+# Loop over each geography level
+# poll$year <- as.numeric(poll$year)
+geo <- "state"
+geo2 <- "state"
+
+# Calculate the share of each response for each question
+df1 <- poll %>%
+  dplyr::select(!!sym(geo), weight, n7fy23_recode, wave) %>%
+  dplyr::filter(!is.na(n7fy23_recode))
+
+df1 <- df1 %>% 
+  dplyr::mutate(count = 1) %>% 
+  dplyr::group_by(!!sym(geo), n7fy23_recode) %>%
+  dplyr::summarise(freq = sum(weight), n_obs = sum(count)) %>%
+  dplyr::mutate(n_wgt = sum(freq),
+                prop  = freq/n_wgt,
+                pct   = prop*100,
+                n_obs = sum(n_obs)) %>% 
+  dplyr::ungroup()
+
+df1 <- df1 %>% 
+  dplyr::filter(n7fy23_recode==1) %>% 
+  dplyr::select(state, n_obs, freq, n_wgt, prop, pct) %>%
+  dplyr::filter(n_obs>500)
+
+length(unique(df1$state))
+for(i in 1:ncol(key)){
+  print(colnames(key)[i])
+  print(length(unique(key[,i])))
+}
+
+
+areapred_st <- areapred %>%
+  dplyr::group_by(state) %>%
+  dplyr::summarise(pred_per = mean(pred_per))
+
+qa_df_st <- base::merge(areapred_st, df1, by="state", all.y=TRUE)
+qa_df_st$difference <- qa_df_st$pred_per - qa_df_st$pct
+
+
+
+# Calculate the share of each response for each question
+df_ct <- poll %>%
+  dplyr::select(weight, n7fy23_recode, wave) %>%
+  dplyr::filter(!is.na(n7fy23_recode))
+
+df_ct <- df_ct %>% 
+  dplyr::mutate(count = 1) %>% 
+  dplyr::group_by(n7fy23_recode) %>%
+  dplyr::summarise(freq = sum(weight), n_obs = sum(count)) %>%
+  dplyr::mutate(n_wgt = sum(freq),
+                prop  = freq/n_wgt,
+                pct   = prop*100,
+                n_obs = sum(n_obs)) %>% 
+  dplyr::ungroup()
+
+df_ct <- df_ct %>% 
+  dplyr::filter(n7fy23_recode==1) %>% 
+  dplyr::select(n_obs, freq, n_wgt, prop, pct)
+
+
+
+india <- readRDS("~/YSE Dropbox/Emily Goddard/ypcccdb/_data/surveys/india/cvoter2025/output/combined_full_india_cvoter_w01-w04_2025.rds")
+
+india_2024 <- india[india$wave=="2024",]
+india_2023 <- india[india$wave=="2023",]
+
+prop.table(table(india_2024$n7fy23))*100
+prop.table(table(india_2023$n7fy23))*100
+
+
+india <- base::merge(india, poll, by=c("caseid","wave"), all.y=TRUE)
+
+
+
 
