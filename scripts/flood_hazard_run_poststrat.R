@@ -30,7 +30,7 @@ xwalks <- paste0(temp,"xwalks/")
 # xwalk_state <- read_excel(paste0(xwalks,"xwalk_state.xlsx"))
 load("~/GitHub/ypccc_us/_data/xwalks/india/output/xwalk_full.rda")
 key <- read.xlsx(paste0(xwalks,"xwalk_district.xlsx"))
-model <- readRDS("~/GitHub/India-IGUIDE/scripts/best_model.rds")
+model <- readRDS("~/GitHub/India-IGUIDE/scripts/best_model_03052026.rds")
 # poll <- read.csv("~/GitHub/ypccc_india/india_w1/iguide/datafiles/Poll_Severe_floods.csv")
 poll <- read.csv("~/Downloads/RAP_Flood_merged_all_updated_20260227.csv")
 poll2 <- read.csv("~/GitHub/ypccc_india/india_w1/iguide/datafiles/03052026/Severe_floods.csv")
@@ -88,10 +88,10 @@ geocode <- levels(as.factor(df$GEOID))
 #                 -district_census11, -state_district_census11, -state_census11_code, 
 #                 -district_census11_code, -district_shape23, -state_district_shape23, 
 #                 -zone, -state_dist, -district, -state, -country)
-df_model <- as.matrix(df)
+# df_model <- as.matrix(df)
 
 #### 3. Create new prediction code using new predict() functionality for merMod objects ####
-cellpred <- predict(model,df_model,type="response",allow.new.levels=TRUE, params = list(predict_disable_shape_check = TRUE))
+cellpred <- predict(model,df,type="response",allow.new.levels=TRUE, params = list(predict_disable_shape_check = TRUE))
 
 #### 4. Weight prediction by frequency of cell (not currently used) ####
 cellpredweighted <- cellpred*df_orig$n_pct_geo
@@ -489,6 +489,7 @@ df1 <- df1 %>%
                 prop  = freq/n_wgt,
                 pct   = prop*100,
                 n_obs = sum(n_obs)) %>% 
+  dplyr::filter(n_obs>50) %>%
   dplyr::ungroup()
 
 df1 <- df1 %>% 
@@ -505,12 +506,26 @@ areapred <- base::merge(areapred, xwalk, by=c("state_shape23", "state_shape23_co
                                               "state_district_census11", "state_census11_code", "district_census11_code", 
                                               "district_shape23", "district_shape23_code", "state_district_shape23", 
                                               "zone"))
-areapred$state_district_survey <- str_to_lower(areapred$state_district_survey)
 
-qa_df <- base::merge(areapred, df1, by="state_district_survey", all.y=TRUE)
-qa_df <- qa_df[qa_df$n_obs>50,]
-qa_df$difference <- qa_df$pred_per - qa_df$pct
+# areapred$state_district_survey <- str_to_lower(areapred$state_district_survey)
 
+qa_df_di <- base::merge(areapred, df1, by="state_district_survey", all.y=TRUE)
+qa_df_di <- na.omit(qa_df_di)
+qa_df_di$difference <- round(qa_df_di$pct - qa_df_di$pred_per,2)
+
+qa_df_di <- qa_df_di %>%
+  dplyr::mutate(survey_pct = round(pct,2),
+                estimate = round(pred_per,2),
+                survey_pop = n_obs,
+                abs_difference = round(abs(difference),2)) %>%
+  dplyr::select(state_district_survey, survey_pop, survey_pct, estimate, difference, abs_difference) %>%
+  dplyr::distinct()
+
+vect <- data.frame(matrix(nrow=1,ncol=ncol(qa_df_di)))
+colnames(vect) <- colnames(qa_df_di)
+vect[,colnames(vect)=="abs_difference"] <- round(mean(qa_df_di[,colnames(qa_df_di)=="abs_difference"],na.rm=TRUE),2)
+vect$state_district_survey <- "Mean Absolute Error"
+qa_df_di <- rbind(qa_df_di, vect)
 
 
 # STATE QA
@@ -551,8 +566,20 @@ areapred_st <- areapred %>%
   dplyr::summarise(pred_per = mean(pred_per))
 
 qa_df_st <- base::merge(areapred_st, df1, by="state", all.y=TRUE)
-qa_df_st$difference <- qa_df_st$pred_per - qa_df_st$pct
+qa_df_st$difference <- round(qa_df_st$pct - qa_df_st$pred_per,2)
 
+qa_df_st <- qa_df_st %>%
+  dplyr::mutate(survey_pct = round(pct,2),
+                estimate = round(pred_per,2),
+                survey_pop = n_obs,
+                abs_difference = abs(difference)) %>%
+  dplyr::select(state, survey_pop, survey_pct, estimate, difference, abs_difference)
+
+vect <- data.frame(matrix(nrow=1,ncol=ncol(qa_df_st)))
+colnames(vect) <- colnames(qa_df_st)
+vect[,colnames(vect)=="abs_difference"] <- round(mean(qa_df_st[,colnames(qa_df_st)=="abs_difference"],na.rm=TRUE),2)
+vect$state <- "Mean Absolute Error"
+qa_df_st <- rbind(qa_df_st, vect)
 
 
 # Calculate the share of each response for each question
@@ -574,6 +601,26 @@ df_ct <- df_ct %>%
   dplyr::filter(n7fy23_recode==1) %>% 
   dplyr::select(n_obs, freq, n_wgt, prop, pct)
 
+areapred_ct <- areapred %>%
+  dplyr::group_by(country) %>%
+  dplyr::summarise(pred_per = mean(pred_per))
+
+qa_df_ct <- cbind(areapred_ct, df_ct)
+
+qa_df_ct$difference <- round(qa_df_ct$pct - qa_df_ct$pred_per,2)
+
+qa_df_ct <- qa_df_ct %>%
+  dplyr::mutate(survey_pct = round(pct,2),
+                estimate = round(pred_per,2),
+                survey_pop = n_obs,
+                abs_difference = abs(difference)) %>%
+  dplyr::select(country, survey_pop, survey_pct, estimate, difference, abs_difference)
+
+write.csv(qa_df_di, file=paste0(outdir,"qa_district.csv"))
+write.csv(qa_df_st, file=paste0(outdir,"qa_state.csv"))
+write.csv(qa_df_ct, file=paste0(outdir,"qa_country.csv"))
+
+
 
 
 india <- readRDS("~/YSE Dropbox/Emily Goddard/ypcccdb/_data/surveys/india/cvoter2025/output/combined_full_india_cvoter_w01-w04_2025.rds")
@@ -586,7 +633,5 @@ prop.table(table(india_2023$n7fy23))*100
 
 
 india <- base::merge(india, poll, by=c("caseid","wave"), all.y=TRUE)
-
-
 
 
