@@ -1,0 +1,17 @@
+"Scenario","Classifier","N_Features","Accuracy","Precision","Recall","F1","AUC","Time_sec"
+"M1_Demographics","RandomForest",5,0.6927,0.6946,0.9838,0.8143,0.5924,0.3
+"M1_Demographics","GradientBoosting",5,0.6885,0.6924,0.9807,0.8117,0.577,0.5
+"M1_Demographics","LogisticRegression",5,0.6848,0.6848,1,0.8129,0.5765,0.1
+"M1_Demographics","LightGBM",5,0.688,0.6944,0.9722,0.8102,0.5515,2.1
+"M2_Climate_Flood","RandomForest",19,0.6869,0.6874,0.9954,0.8132,0.5983,0.3
+"M2_Climate_Flood","GradientBoosting",19,0.6837,0.6858,0.9931,0.8113,0.5875,1.2
+"M2_Climate_Flood","LogisticRegression",19,0.6832,0.6855,0.9931,0.8111,0.5841,0.2
+"M2_Climate_Flood","LightGBM",19,0.6816,0.688,0.9792,0.8081,0.5676,3.6
+"M3_With_Spatial","RandomForest",50,0.6901,0.694,0.9792,0.8123,0.6415,0.5
+"M3_With_Spatial","GradientBoosting",50,0.6922,0.6981,0.9699,0.8119,0.6415,3.6
+"M3_With_Spatial","LogisticRegression",50,0.6853,0.6925,0.9722,0.8089,0.605,0.3
+"M3_With_Spatial","LightGBM",50,0.6917,0.7006,0.9599,0.81,0.6347,2.7
+"M4_Everything","RandomForest",626,0.6859,0.6871,0.9938,0.8125,0.6135,2.7
+"M4_Everything","GradientBoosting",626,0.6859,0.695,0.9645,0.8079,0.6361,36.7
+"M4_Everything","LogisticRegression",626,0.4583,0.657,0.4372,0.525,0.4707,83.2
+"M4_Everything","LightGBM",626,0.6938,0.7029,0.9576,0.8107,0.6321,5.8
