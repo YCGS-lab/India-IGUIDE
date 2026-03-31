@@ -1,9 +1,17 @@
 rm(list=ls())
 library(openxlsx)
+library(tidyverse)
 library(sf)
 library(ggtext)
 library(stringr)
 library(ggplot2)
+library(merTools)
+
+# Function to calculate the mean of a data vector given indices
+boot_mean <- function(data, indices) {
+  d <- data[indices] # Select the data subset using the current bootstrap indices
+  return(mean(d, na.rm = TRUE)) # Calculate the statistic (e.g., mean)
+}
 
 # Set parameters
 demo_vars <- c("gender", "age", "caste", "urban") 
@@ -30,7 +38,8 @@ xwalks <- paste0(temp,"xwalks/")
 # xwalk_state <- read_excel(paste0(xwalks,"xwalk_state.xlsx"))
 load("~/GitHub/ypccc_us/_data/xwalks/india/output/xwalk_full.rda")
 key <- read.xlsx(paste0(xwalks,"xwalk_district.xlsx"))
-model <- readRDS("~/GitHub/India-IGUIDE/scripts/best_model_03052026.rds")
+model <- readRDS("~/Downloads/best_model_03112026_withoutGSD.rds")
+# model <- readRDS("~/GitHub/India-IGUIDE/scripts/best_model_03052026.rds")
 # poll <- read.csv("~/GitHub/ypccc_india/india_w1/iguide/datafiles/Poll_Severe_floods.csv")
 poll <- read.csv("~/Downloads/RAP_Flood_merged_all_updated_20260227.csv")
 poll2 <- read.csv("~/GitHub/ypccc_india/india_w1/iguide/datafiles/03052026/Severe_floods.csv")
@@ -38,7 +47,8 @@ df <- read.csv("~/Downloads/district_wise_covars_flood.csv")
 load("~/GitHub/ypccc_india/india_w1.5/temp/df_district.rda")
 # df1 <- read.csv("~/GitHub/ypccc_india/india_w1/iguide/datafiles/Severe_floods.csv")
 # df_model <- read.csv("~/GitHub/ypccc_india/india_w1/iguide/datafiles/final_data_for_modelling.csv")
-covars <- read.csv("~/Downloads/covariates.csv")
+# covars2 <- read.csv("~/Downloads/covariates.csv")
+# covars <- read.csv("~/Downloads/best_covariates_without_GSD.csv")
 df2 <- read.csv("~/Downloads/district_level_spatial_features_covariates.csv")
 
 # Merge polls
@@ -66,14 +76,17 @@ colnames(df)[colnames(df)=="N"] <- "count"
 df <- base::merge(df, key, by.x="di_code",by.y="district_shape23_code", all.y=TRUE)
 df <- base::merge(df, df_district, by=c("state_dist_code","state_code","district_code"), all.x=TRUE)
 
-covars <- trimws(covars$features)
+# covars <- trimws(covars$features)
+# covars <- trimws(covars$Feature)
 
 df_orig <- df
 df <- df %>%
-  dplyr::select(all_of(covars))
+  dplyr::select(all_of(model$var.names))
 
+# GFD_sum, lag_GFD_sum, lisa_I_GFD, lisa_GFD_high_high, lisa_GFD_low_high, 
+# lisa_GFD_low_low, lisa_GFD_high_low, lisa_GFD_not_sig, 
 
-rm(df_district, df2)
+# rm(df_district, df2)
 
 #### 0. Set seed ####
 set.seed(2496)
@@ -92,6 +105,8 @@ geocode <- levels(as.factor(df$GEOID))
 
 #### 3. Create new prediction code using new predict() functionality for merMod objects ####
 cellpred <- predict(model,df,type="response",allow.new.levels=TRUE, params = list(predict_disable_shape_check = TRUE))
+
+
 
 #### 4. Weight prediction by frequency of cell (not currently used) ####
 cellpredweighted <- cellpred*df_orig$n_pct_geo
@@ -257,8 +272,8 @@ areapred_write <- areapred %>%
 if(dir.exists(paste0(outdir))==FALSE){
   dir.create(paste0(outdir), recursive=TRUE)
 }
-write.csv(areapred_write, file=paste0(outdir,"flood_table.csv"), row.names = FALSE)
-save(areapred_write, file=paste0(outdir,"flood_table.Rda"))
+# write.csv(areapred_write, file=paste0(outdir,"flood_table.csv"), row.names = FALSE)
+# save(areapred_write, file=paste0(outdir,"flood_table.Rda"))
 
 #### 5. Save country files ####
 # if(level=="state"){
@@ -326,6 +341,33 @@ district <- areapred %>%
 # Load the shapefiles that Martial is using:
 shape_district <- read_sf(dsn=paste0("~/GitHub/ypccc_us/_data/external/india/shapefiles/2023/output"), layer=paste0("district_state_shapefile_2023"))
 
+
+
+df_pop <- df_district %>%
+  dplyr::ungroup() %>%
+  dplyr::select(state_code, district_code, N) %>%
+  dplyr::distinct()
+
+xwalk_pop <- xwalk %>% 
+  dplyr::mutate(state_code = ifelse(state_shape23=="TELANGANA", "36", state_census11_code), 
+                district_code = district_census11_code) %>%
+  dplyr::select(state_census11, district_census11, state_district_census11, 
+                state_code, district_code, state_shape23, state_shape23_code, 
+                district_shape23, district_shape23_code, state_district_shape23) %>%
+  dplyr::distinct()
+
+df_pop <- base::merge(df_pop,xwalk_pop, by=c("state_code", "district_code"), all=TRUE)
+df_pop <- df_pop %>%
+  dplyr::group_by(state_district_shape23) %>%
+  dplyr::summarise(population = sum(N)) %>%
+  dplyr::rename(GeoName = state_district_shape23) %>%
+  dplyr::select(GeoName, population) %>%
+  dplyr::distinct()
+
+shape_di <- base::merge(shape_district, df_pop, by="GeoName", all=TRUE) %>%
+  dplyr::select(GeoName, GEOID, population, state23, st_code, dist23, di_code, geometry)
+
+write_sf(shape_di, "~/YSE Dropbox/Emily Goddard/India-IGUIDE/output_flood/shapefile/district_shapefile.shp")
 #==============================================================================#
 # 3.0 Reformat Shapefiles
 #==============================================================================#
@@ -404,9 +446,9 @@ p <- ggplot(data)+
         plot.margin = margin(0.5, 0.5, 0.5, 0.5, "cm"))
 
 # Print Map
-png(file=outpath, res=300, width=12.5, height=10, units="in")
-print(p)
-dev.off()  
+# png(file=outpath, res=300, width=12.5, height=10, units="in")
+# print(p)
+# dev.off()  
 
 #==============================================================================#
 # 5.0 Loop Over Each Question to Create Difference Maps ###
@@ -616,22 +658,22 @@ qa_df_ct <- qa_df_ct %>%
                 abs_difference = abs(difference)) %>%
   dplyr::select(country, survey_pop, survey_pct, estimate, difference, abs_difference)
 
-write.csv(qa_df_di, file=paste0(outdir,"qa_district.csv"))
-write.csv(qa_df_st, file=paste0(outdir,"qa_state.csv"))
-write.csv(qa_df_ct, file=paste0(outdir,"qa_country.csv"))
+# write.csv(qa_df_di, file=paste0(outdir,"qa_district.csv"))
+# write.csv(qa_df_st, file=paste0(outdir,"qa_state.csv"))
+# write.csv(qa_df_ct, file=paste0(outdir,"qa_country.csv"))
 
 
 
-
-india <- readRDS("~/YSE Dropbox/Emily Goddard/ypcccdb/_data/surveys/india/cvoter2025/output/combined_full_india_cvoter_w01-w04_2025.rds")
-
-india_2024 <- india[india$wave=="2024",]
-india_2023 <- india[india$wave=="2023",]
-
-prop.table(table(india_2024$n7fy23))*100
-prop.table(table(india_2023$n7fy23))*100
-
-
-india <- base::merge(india, poll, by=c("caseid","wave"), all.y=TRUE)
+# 
+# india <- readRDS("~/YSE Dropbox/Emily Goddard/ypcccdb/_data/surveys/india/cvoter2025/output/combined_full_india_cvoter_w01-w04_2025.rds")
+# 
+# india_2024 <- india[india$wave=="2024",]
+# india_2023 <- india[india$wave=="2023",]
+# 
+# prop.table(table(india_2024$n7fy23))*100
+# prop.table(table(india_2023$n7fy23))*100
+# 
+# 
+# india <- base::merge(india, poll, by=c("caseid","wave"), all.y=TRUE)
 
 
