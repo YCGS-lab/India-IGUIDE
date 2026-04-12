@@ -1,0 +1,22 @@
+"","state_district_survey","survey_pop","survey_pct","estimate","difference","abs_difference"
+"1","Bihar, Muzaffarpur",52,66.55,79.41,-12.86,12.86
+"2","Bihar, Patna",60,78.07,65.26,12.81,12.81
+"3","Gujarat, Surat",55,69.51,66.59,2.92,2.92
+"4","Maharashtra, Ahmednagar",67,66.91,71.95,-5.03,5.03
+"5","Maharashtra, Aurangabad",52,77.83,64.53,13.29,13.29
+"6","Maharashtra, Nashik",68,85.76,62.81,22.95,22.95
+"7","Maharashtra, Pune",87,62.82,70.18,-7.36,7.36
+"8","Maharashtra, Satara",51,73.08,70.44,2.63,2.63
+"9","Maharashtra, Solapur",56,58.6,62.41,-3.81,3.81
+"10","Rajasthan, Jaipur",68,61.39,60.02,1.38,1.38
+"11","Uttar Pradesh, Allahabad",53,76.52,53.73,22.79,22.79
+"12","Uttar Pradesh, Bareilly",57,73.33,61.29,12.03,12.03
+"13","Uttar Pradesh, Lucknow",60,75.29,60.04,15.25,15.25
+"14","Uttar Pradesh, Varanasi",52,85.03,57.14,27.9,27.9
+"15","West Bengal, Burdwan",67,72.4,61.42,10.99,10.99
+"16","West Bengal, Murshidabad",61,65.83,57.88,7.96,7.96
+"17","West Bengal, North 24-Parganas",79,70.35,54.39,15.96,15.96
+"18","West Bengal, Pashchim Medinipur",69,78.86,54.49,24.37,24.37
+"19","West Bengal, Purbo Medinipur",86,78.72,81.18,-2.47,2.47
+"20","West Bengal, South 24-Parganas",77,77.36,64.11,13.25,13.25
+"21","Mean Absolute Error",NA,NA,NA,NA,11.9
