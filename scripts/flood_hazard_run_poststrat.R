@@ -6,6 +6,7 @@ library(ggtext)
 library(stringr)
 library(ggplot2)
 library(merTools)
+library(viridis)
 
 # Function to calculate the mean of a data vector given indices
 boot_mean <- function(data, indices) {
@@ -263,17 +264,36 @@ for(i in 1:length(pred_area_demo)){
 }
 
 areapred_write <- areapred %>%
-  dplyr::mutate(GeoName = display_name,
-                GeoID = state_dist_code,
+  dplyr::mutate(GeoName = str_to_title(state_district_shape23),
+                GeoID = paste0(state_shape23_code, district_shape23_code),
                 state = str_to_title(state_shape23)) %>%
+  # dplyr::mutate(GeoName = display_name,
+  #               GeoID = state_dist_code,
+  #               state = str_to_title(state_shape23)) %>%
   dplyr::select(GeoName, GeoID, state, zone, n, cellpred_n, pred_prop, pred_per, national_per, pred_per_diff)
+
+# load("~/GitHub/ypccc_us/_data/xwalks/india/output/xwalk_full.rda")
+# xwalk <- xwalk %>%
+#   dplyr::mutate(GeoID = paste0(state_census11_code, district_census11_code),
+#                 GeoID2 = paste0(state_shape23_code, district_shape23_code),
+#                 GeoName2 = str_to_title(state_district_shape23)) %>%
+#   dplyr::select(GeoID2, GeoID, GeoName2) %>%
+#   dplyr::distinct()
+# 
+# areapred_write <- base::merge(areapred_write, xwalk, by="GeoID", all.x=TRUE)
+# 
+# areapred_write <- areapred_write %>%
+#   dplyr::select(-GeoID, -GeoName) %>%
+#   dplyr::rename(GeoID = GeoID2,
+#                 GeoName = GeoName2)%>%
+#   dplyr::distinct()
 
 #### 4. Save geography files ####
 if(dir.exists(paste0(outdir))==FALSE){
   dir.create(paste0(outdir), recursive=TRUE)
 }
-# write.csv(areapred_write, file=paste0(outdir,"flood_table.csv"), row.names = FALSE)
-# save(areapred_write, file=paste0(outdir,"flood_table.Rda"))
+write.csv(areapred_write, file=paste0(outdir,"flood_table.csv"), row.names = FALSE)
+save(areapred_write, file=paste0(outdir,"flood_table.Rda"))
 
 #### 5. Save country files ####
 # if(level=="state"){
@@ -367,7 +387,7 @@ df_pop <- df_pop %>%
 shape_di <- base::merge(shape_district, df_pop, by="GeoName", all=TRUE) %>%
   dplyr::select(GeoName, GEOID, population, state23, st_code, dist23, di_code, geometry)
 
-write_sf(shape_di, "~/YSE Dropbox/Emily Goddard/India-IGUIDE/output_flood/shapefile/district_shapefile.shp")
+# write_sf(shape_di, "~/YSE Dropbox/Emily Goddard/India-IGUIDE/output_flood/shapefile/district_shapefile.shp")
 #==============================================================================#
 # 3.0 Reformat Shapefiles
 #==============================================================================#
@@ -675,5 +695,45 @@ qa_df_ct <- qa_df_ct %>%
 # 
 # 
 # india <- base::merge(india, poll, by=c("caseid","wave"), all.y=TRUE)
+
+colors <- c("dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00", "black", "gold1", "skyblue2", "#FB9A99", "palegreen2", "#CAB2D6", "#FDBF6F", "gray70", "khaki2", "maroon", "orchid1", "deeppink1", "blue1", "steelblue4", "darkturquoise", "green1", "yellow4", "yellow3", "darkorange4", "brown")
+
+# Create Plots
+geo <- "state_district_survey"
+namecol <- "district"
+df <- qa_df_di[qa_df_di$state_district_survey!="Mean Absolute Error",]
+title <- paste0("Flood Worry Model Validation")
+# pop_lab <- paste0("n = ",round(max(qa_df_di$survey_pop, na.rm = TRUE),0))
+  
+# Create Plot
+plot <- ggplot(df, aes(x=estimate, y=survey_pct)) +
+  geom_abline(intercept = 0, slope = 1, color="#242424") +
+  # geom_smooth(method = "lm", color="gray", se=FALSE, linewidth=1) + 
+  geom_point(aes(color = state_district_survey, size=0.3)) +
+  scale_color_discrete(palette=colors) +
+  scale_x_continuous(limits = c(0,100), breaks = seq(0,100,10), labels = seq(0,100,10))+#breaks = seq(0,max(data$pred_per_9, na.rm = TRUE),10)) +
+  scale_y_continuous(limits = c(0,100), breaks = seq(0,100,10), labels = seq(0,100,10))+#breaks = seq(0,max(data$pred_per_survey, na.rm = TRUE),10)) +
+  # geom_text(aes(label = state_district_survey), size=1, color="white") + 
+  labs(title = title,
+       x = paste0("Model Estimate"),
+       y = "Weighted Survey Average") +
+  # annotate("text", x=10, y=90, label=pop_lab) +
+  scale_size(guide = 'none') +
+  guides(color=guide_legend(title="District", ncol = 1)) +
+  theme_light() +
+  theme(plot.title = element_text(hjust = 0.5),
+        legend.position = "left",
+        legend.key.size = unit(0.3, 'cm'),
+        legend.key.height = unit(0.3, 'cm'),
+        legend.key.width = unit(0.3, 'cm'),
+        legend.title = element_text(size=10),
+        legend.text = element_text(size=6))  
+
+print(plot)
+
+if(dir.exists(paste0(outdir,"/scatter/"))==FALSE){
+  dir.create(paste0(outdir,"/scatter/"), recursive=TRUE)
+}
+ggsave(paste0(outdir,"/scatter/validation_plot.png"), plot, width = 6, height = 4)
 
 
