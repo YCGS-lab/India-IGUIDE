@@ -35,14 +35,22 @@ geo_cols <- c("state_district_survey", "state", "country")
 # Geography namess
 geo_names <- c("district", "state", "country")
 
+# Set population cutoffs
+pops <- c(50, 500, 500)
+
 # Set plot colors
-colors <- c("dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00", "black", "gold1", "skyblue2", "#FB9A99", "palegreen2", "#CAB2D6", "#FDBF6F", "gray70", "khaki2", "maroon", "orchid1", "deeppink1", "blue1", "steelblue4", "darkturquoise", "green1", "yellow4", "yellow3", "darkorange4", "brown")
+colors <- c("dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00", "black", 
+            "gold1", "skyblue2", "#FB9A99", "palegreen2", "#CAB2D6", "#FDBF6F", 
+            "gray70", "khaki2", "maroon", "orchid1", "deeppink1", "blue1", "steelblue4", 
+            "darkturquoise", "green1", "yellow4", "yellow3", "darkorange4", "brown",
+            "orange2", "purple4", "lightblue", "red1", "yellow")
 
 #==============================================================================#
 # 2.0 Load Files ####
 #==============================================================================#
 # Poll file
 poll <- read.csv(paste0(input,"/poll_flood_updated_03052026.csv"))
+poll2 <- read.csv(paste0(input,"/_archive/RAP_Flood_merged_all_updated_20260227.csv"))
 
 # Load MRP results
 areapred <- readRDS(paste0(outdir,"final/flood_district_mapping.rds"))
@@ -50,14 +58,50 @@ areapred <- readRDS(paste0(outdir,"final/flood_district_mapping.rds"))
 # Crosswalk file
 xwalk <- read.csv(paste0(xwalk_path,"xwalk_full.csv"))
 
+# Check Poll Data
+ccim <- readRDS("~/YSE Dropbox/Emily Goddard/ypcccdb/_data/surveys/india/cvoter2026/output/combined_full_india_cvoter_w01-w05_2026.rds")
+ccim$n7fy23_recode <- case_when(ccim$n7fy23_flood_worry %in% c("Moderately worried", "Very worried") ~ 1,
+                                ccim$n7fy23_flood_worry %in% c("Not at all worried", "Not very worried",
+                                                               "Refused", "Don't know") ~ 0,
+                                .default = NA)
+
+cols <- colnames(ccim)[colnames(ccim) %in% colnames(poll)]
+ccim <- ccim %>%
+  dplyr::select(all_of(cols), urban_rural) %>%
+  dplyr::rename(urban = urban_rural) %>%
+  dplyr::filter(wave=="tapp") %>%
+  dplyr::filter(!is.na(n7fy23_recode))
+
+# ccim$all <- paste0(ccim$state, ccim$district, ccim$age, ccim$gender, ccim$caste, ccim$urban, ccim$n7fy23_recode)
+# poll$all <- paste0(poll$state, poll$district, poll$age, poll$gender, poll$caste, poll$urban, poll$n7fy23_recode)
+
+poll <- poll[, colnames(poll) %in% colnames(ccim)]
+
+# Check Another poll data
+# poll_feb <- read.csv("~/GitHub/ypccc_india/india_w1/iguide/datafiles/Poll_Severe_floods.csv")
+# poll_final <- read.csv("~/GitHub/ypccc_india/india_w1/iguide/datafiles/final_data_for_modelling.csv")
+# length(poll_final$caseid[!duplicated(poll_final$caseid)])
+
 #==============================================================================#
 # 3.0 Calculate Margin of Error ####
 #==============================================================================#
+# Calculate Percent by level
+areapred$country_per <- areapred$national_per
+areapred$district_per <- areapred$pred_per
+areapred_state <-  areapred %>%
+  dplyr::group_by(state) %>%
+  dplyr::summarise(state_n = sum(n, na.rm=TRUE), 
+                   state_cellpred_n = sum(cellpred_n, na.rm=TRUE)) %>%
+  dplyr::mutate(state_per = (state_cellpred_n / state_n)*100) %>%
+  dplyr::select(state, state_per)
+areapred <- base::merge(areapred, areapred_state, by="state", all.x=TRUE)
+rm(areapred_state)
+
 # Merge MRP results with crosswalk
 areapred <- base::merge(areapred, xwalk, by=c("state_shape23", "state_shape23_code", "state_census11", "district_census11", 
                                               "state_district_census11", "state_census11_code", "district_census11_code", 
                                               "district_shape23", "district_shape23_code", "state_district_shape23", 
-                                              "zone"))
+                                              "zone"), all.x=TRUE)
 
 # Create Country Column
 poll$country <- "India"
@@ -67,11 +111,14 @@ qa_list <- list()
 for(i in 1:length(geo_cols)){
   geo_col <- geo_cols[i]
   geo_name <- geo_names[i]
+  pct_name <- paste0(geo_name,"_per")
 
   # Calculate the share of each response for each question
   df1 <- poll %>%
-    dplyr::select(!!sym(geo_col), weight, n7fy23_recode, wave) %>%
-    dplyr::filter(!is.na(n7fy23_recode))
+    dplyr::select(caseid, !!sym(geo_col), weight, n7fy23_recode, wave) %>%
+    dplyr::filter(!is.na(n7fy23_recode),
+                  !is.na(!!sym(geo_col))) %>%
+    dplyr::distinct()
   
   df1 <- df1 %>% 
     dplyr::mutate(count = 1) %>% 
@@ -81,13 +128,19 @@ for(i in 1:length(geo_cols)){
                   prop  = freq/n_wgt,
                   pct   = prop*100,
                   n_obs = sum(n_obs)) %>% 
-    dplyr::filter(n_obs>50, 
+    dplyr::filter(n_obs>pops[i], 
                   n7fy23_recode==1) %>%
     dplyr::ungroup() %>% 
     dplyr::select(!!sym(geo_col), n_obs, freq, n_wgt, prop, pct)
   
+  # Calculate averages by geography
+  areapred_geo <- areapred %>%
+    dplyr::select(!!sym(geo_col), !!sym(pct_name)) %>%
+    dplyr::rename(pred_per = !!sym(pct_name)) %>%
+    dplyr::distinct()
+  
   # Merge MRP estimates and survey weighted averages
-  qa_list[[i]] <- base::merge(areapred, df1, by=geo_col, all.y=TRUE)
+  qa_list[[i]] <- base::merge(areapred_geo, df1, by=geo_col, all.y=TRUE)
   qa_list[[i]] <- na.omit(qa_list[[i]])
   
   # Calculate the difference between survey weighted averages and MRP estimates
@@ -147,9 +200,9 @@ if(dir.exists(paste0(outdir,"QA/"))==FALSE){
 }
 
 # Write QA files
-write.csv(qa_list[[1]], file=paste0(outdir,"QA/qa_district.csv"))
-write.csv(qa_list[[2]], file=paste0(outdir,"QA/qa_state.csv"))
-write.csv(qa_list[[3]], file=paste0(outdir,"QA/qa_country.csv"))
+write.csv(qa_list[[1]], file=paste0(outdir,"QA/qa_district.csv"), row.names = FALSE)
+write.csv(qa_list[[2]], file=paste0(outdir,"QA/qa_state.csv"), row.names = FALSE)
+write.csv(qa_list[[3]], file=paste0(outdir,"QA/qa_country.csv"), row.names = FALSE)
 
 # Write scatterplot
 ggsave(paste0(outdir,"QA/validation_plot.png"), plot, width = 6, height = 4)

@@ -63,7 +63,7 @@ map.palette <- rev(c("(95,100]"="#450847",
 areapred <- readRDS(paste0(outdir,"final/flood_district_mapping.rds"))
 
 # Load the shapefile
-shape_district <- read_sf(dsn=paste0(input, "shapefiles/district"), layer=paste0("district_state_shapefile_2023"))
+shape_district <- read_sf(dsn=paste0(input, "shapefiles/"), layer=paste0("district_shapefile"))
 
 #==============================================================================#
 # 3.0 Prep and Format Data

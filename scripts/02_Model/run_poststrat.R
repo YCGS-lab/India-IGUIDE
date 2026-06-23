@@ -22,6 +22,11 @@ library(openxlsx)
 library(tidyverse)
 library(stringr)
 library(merTools)
+library(gbm)
+library(xgboost)
+library(boot)
+library(dplyr)
+library(caret)
 
 # Load File Paths
 dropbox <- "~/YSE Dropbox/Emily Goddard/India-IGUIDE/"
@@ -39,6 +44,7 @@ column_name <- "state_dist_code"
 demo_vars <- c("gender", "age", "caste", "urban") 
 
 # Calculate all demographic combinations
+col_vars <- c()
 if(length(demo_vars)>1){
   for(k in 2:length(demo_vars)){
     temp_vars <- paste0(utils::combn(demo_vars, k, paste0, collapse = "_"))
@@ -62,7 +68,10 @@ df2 <- read.csv(paste0(input,"/district_level_spatial_features_covariates.csv"))
 
 # Census counts
 load(paste0(input,"/df_district.rda"))
-     
+
+# Poll
+poll <- read.csv(paste0(input,"/poll_flood_updated_03052026.csv"))
+
 #==============================================================================#
 # 3.0 Prep and Clean Data ####
 #==============================================================================#
@@ -110,6 +119,52 @@ cellpredweighted <- cellpred*df_census$n_pct_geo
 
 #### 4. Calculate n for each cell ####
 cellpred_n <- cellpred*df_census$n
+
+
+#### 5. Calculate Confidence Intervals
+bootfun <- function(poll) {
+  #As before, just the defaults in this example. Palmitic is the first variable, hence data[,1]
+  tr <- train(poll[,-1], poll[,1], method = "gbm", verbose=FALSE)
+  
+  predict(tr$Model, data = df_covar,type="response",allow.new.levels=TRUE, params = list(predict_disable_shape_check = TRUE))
+}
+
+#Perform the bootstrap, this can be very time consuming. Just 99 replicates here but we usually want to do more, e.g. 500. Consider using the parallel option
+b <- boot(data = df_covar, statistic = bootfun, R = 99)
+
+
+#Get the 95% intervals from the boot object as the 2.5th and 97.5th percentiles
+lims <- t(apply(b$t, 2, FUN = function(x) quantile(x, c(0.025, 0.975))))
+
+
+
+
+# Define a function to train the model and make predictions
+xgboost_predict <- function(data, indices) {
+  dtrain <- xgb.DMatrix(data = data[indices, -1], label = data[indices, 1])
+  model <- xgboost(data = dtrain, params = params, nrounds = 99, verbose = 0)
+  pred <- predict(model, as.matrix(mtcars[, -1]))
+  return(pred)
+}
+
+# Combine the response and predictor variables into one dataframe
+data_combined <- cbind(y, x)
+
+# Apply bootstrapping
+set.seed(123)  # For reproducibility
+bootstrap_results <- boot(data_combined, statistic = xgboost_predict, R = 1000)
+
+# Calculate the confidence intervals
+confidence_intervals <- apply(bootstrap_results$t, 2, function(x) quantile(x, 
+                                                                           probs = c(0.025, 0.975)))
+
+# Print the confidence intervals for the first few predictions
+print(confidence_intervals[, 1:5])
+
+
+
+
+
 
 #### 5. Calculate national total n and proportion ####
 pred.total <- data.frame(sum(df_census$n, na.rm=TRUE), 
