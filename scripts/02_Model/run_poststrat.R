@@ -60,43 +60,49 @@ key <- read.xlsx(paste0(xwalk_path,"xwalk_district.xlsx"))
 # Model file
 model <- readRDS(paste0(input,"/best_model_03112026_withoutGSD.rds"))
 
-# Covariate dataframe
-df <- read.csv(paste0(input,"/district_wise_covars_flood.csv"))
+# Census DF
+df_census <- readRDS(paste0(dropbox, "_data/census_df/df_district_covariates.rds"))
 
-# Spatial covariates dataframe
-df2 <- read.csv(paste0(input,"/district_level_spatial_features_covariates.csv"))
+# Poll Data
+poll <- readRDS(paste0(dropbox, "_data/poll/poll_covariates.rds"))
 
-# Census counts
-load(paste0(input,"/df_district.rda"))
-
-# Poll
-poll <- read.csv(paste0(input,"/poll_flood_updated_03052026.csv"))
+# # Covariate dataframe
+# df <- read.csv(paste0(input,"/_archive/district_wise_covars_flood.csv"))
+# 
+# # Spatial covariates dataframe
+# df2 <- read.csv(paste0(input,"/_archive/district_level_spatial_features_covariates.csv"))
+# 
+# # Census counts
+# load(paste0(input,"/df_district.rda"))
+# 
+# # Poll
+# poll <- read.csv(paste0(input,"/poll_flood_updated_03052026.csv"))
 
 #==============================================================================#
 # 3.0 Prep and Clean Data ####
 #==============================================================================#
-# Merge covariate dataframes
-df <- base::merge(df, df2, by="di_code",all=TRUE)
-
-# Add leading zeros to .csv file
-df$di_code <- ifelse(
-  nchar(df$di_code) == 1,
-  paste0("00", df$di_code),
-  ifelse(
-    nchar(df$di_code) == 2,
-    paste0("0", df$di_code),
-    as.character(df$di_code)
-  )
-)
-
-# Change column name of population counts
-colnames(df)[colnames(df)=="N"] <- "count"
-
-# Merge data with crosswalk
-df <- base::merge(df, key, by.x="di_code",by.y="district_shape23_code", all.y=TRUE)
-
-# Merge covariates with census counts
-df_census <- base::merge(df, df_district, by=c("state_dist_code","state_code","district_code"), all.x=TRUE)
+# # Merge covariate dataframes
+# df <- base::merge(df, df2, by="di_code",all=TRUE)
+# 
+# # Add leading zeros to .csv file
+# df$di_code <- ifelse(
+#   nchar(df$di_code) == 1,
+#   paste0("00", df$di_code),
+#   ifelse(
+#     nchar(df$di_code) == 2,
+#     paste0("0", df$di_code),
+#     as.character(df$di_code)
+#   )
+# )
+# 
+# # Change column name of population counts
+# colnames(df)[colnames(df)=="N"] <- "count"
+# 
+# # Merge data with crosswalk
+# df <- base::merge(df, key, by.x="di_code",by.y="district_shape23_code", all.y=TRUE)
+# 
+# # Merge covariates with census counts
+# df_census <- base::merge(df, df_district, by=c("state_dist_code","state_code","district_code"), all.x=TRUE)
 
 # Subset dataframe to only covariates used in the model
 df_covar <- df_census %>%

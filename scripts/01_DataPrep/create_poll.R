@@ -23,6 +23,7 @@ year <- "2026"
 wave <- "05" 
 surveyname <- "cvoter" 
 model_no <- "2"
+remove_states <- c("Andaman & Nicobar Islands", "Kargil", "Leh")
 
 # Set file paths
 github <- paste0("~/GitHub/India-IGUIDE/")
@@ -41,41 +42,62 @@ ccim <- readRDS(paste0(survey,"combined_full_india_",surveyname,"_w01-w",wave,"_
 # Crosswalk
 xwalk <- read.xlsx(paste0(xwalk_path, "xwalk_full.xlsx"))
 
+# Covariates
+covars <- readRDS(paste0(dropbox, "covariates/covariates.rds"))
 #==============================================================================#
-# 2.0 Load Covariates ####
+# 2.0 Subset Data ####
 #==============================================================================#
-
-#==============================================================================#
-# 3.0 Subset Data ####
-#==============================================================================#
-ccim <- ccim %>%
+poll <- ccim %>%
   dplyr::select(caseid, weight, wave, state, district, age, gender, caste, 
                 religion, urban_rural, starts_with("n7")) %>%
-  dplyr::filter(wave=="tapp") %>%
+  dplyr::filter(wave=="tapp", 
+                !is.na(weight)) %>%
+  dplyr::mutate(state_district = paste0(state, ", ", district)) %>%
   dplyr::distinct()
 
-# Merge Crosswalk
-poll <- base::merge(ccim, xwalk, 
-                    by.x=c("state", "district"),
-                    by.y=c("state_survey", "district_survey"))
+# Replace "Not Asked"
+poll[poll=="Not asked"] <- NA
+poll <- poll[, colSums(is.na(poll)) < nrow(poll)]
+
+# Remove states
+poll <- poll[!poll$district %in% remove_states,]
 
 rm(ccim)
 #==============================================================================#
-# 4.0 Merge Covariates ####
+# 3.0 Merge Covariates ####
 #==============================================================================#
+# Limit Covariate Data to Survey
+state_dist <- unique(poll$state_district)
 
+# Summarize Covariates as needed by survey data
+covars <- covars %>%
+  dplyr::filter(state_district_survey %in% state_dist) %>%
+  dplyr::select(-contains("_shape23"), -contains("_census11")) %>%
+  dplyr::group_by(state_survey, district_survey, state_district_survey) %>%
+  summarise(across(where(is.numeric), mean, na.rm = TRUE)) %>%
+  dplyr::distinct()
 
+# Merge datasets
+poll_covars <- base::merge(covars, poll, 
+                           by.x=c("state_survey", "district_survey", "state_district_survey"), 
+                           by.y=c("state", "district", "state_district"), 
+                           all=TRUE) %>%
+  dplyr::filter(!is.na(weight)) %>%
+  dplyr::distinct()
 
-
-
-
+# Check for Missing Data
+countna <- function(x){sum(is.na(x))}
+nans <- lapply(poll_covars, countna)
 
 #==============================================================================#
-# 7.0 Write Data ####
+# 4.0 Write Data ####
 #==============================================================================#
+# Write data
 write_rds(poll, paste0(dropbox, "poll/poll.rds"))
-# write_rds(poll_covars, paste0(dropbox, "poll/poll_covariates.rds"))
+write_rds(poll_covars, paste0(dropbox, "poll/poll_covariates.rds"))
 
+write.xlsx(poll, paste0(dropbox, "poll/poll.xlsx"))
+write.xlsx(poll_covars, paste0(dropbox, "poll/poll_covariates.xlsx"))
 #==============================================================================#
 # END OF FILE ####
 #==============================================================================#
