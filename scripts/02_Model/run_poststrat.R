@@ -55,7 +55,7 @@ if(length(demo_vars)>1){
 # 2.0 Load Files ####
 #==============================================================================#
 # Crosswalk file
-key <- read.xlsx(paste0(xwalk_path,"xwalk_district.xlsx"))
+key <- read.xlsx(paste0(xwalk_path,"xwalk_full.xlsx"))
 
 # Model file
 model <- readRDS(paste0(input,"/best_model_03112026_withoutGSD.rds"))
