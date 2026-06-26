@@ -18,6 +18,7 @@ library(plyr)
 library(tidyverse)
 library(ggplot2)
 library(sf)
+library(openxlsx)
 
 # Identify states to remove from data (not mapping these)
 remove_states <- c("Ladakh","Lakshadweep","Andaman & Nicobar")
@@ -41,7 +42,7 @@ model[["var.names"]]
 load(paste0(external,"literacy/census.district.Rda"))
 
 # Extreme Weather Vulnerability
-ceew_d <- read_excel(paste0(external,"vulnerability_data/CEEW/CEEW - CVAT Main sheet 15Jun23.xlsx"), sheet = "District")
+ceew_d <- read.xlsx(paste0(external,"vulnerability_data/CEEW/CEEW - CVAT Main sheet 15Jun23.xlsx"), sheet = "District")
 
 # Nightime lights
 # lights <- read.csv("India_District_Medain_NTL_2024.csv")
@@ -50,7 +51,8 @@ ceew_d <- read_excel(paste0(external,"vulnerability_data/CEEW/CEEW - CVAT Main s
 precip_temp <- read.csv("Latest_India_District_Merged_NTL_Precp_Temp_2024.csv")
 
 # News media
-news <- read.csv(paste0(dropbox,"_archive/district_wise_covars_flood.csv"))
+news <- read.csv("news_data_updated.csv")
+news_key <- read.xlsx("news_key.xlsx")
 
 # Flow accumulation
 flow <- read.csv("India_FlowAccumulation.csv")
@@ -68,6 +70,9 @@ spat <- read.csv(paste0(dropbox,"/_archive/district_level_spatial_features_covar
 
 # Crosswalk
 xwalk <- read.xlsx(paste0(xwalk_path, "xwalk_full.xlsx"))
+
+# TEMP
+df2 <- read.csv(paste0(dropbox,"/_archive/district_level_spatial_features_covariates.csv"))
 
 rm(alpha_earth)
 #==============================================================================#
@@ -109,9 +114,9 @@ rm(cd, higher_ed, xwalk)
 # 2.2 Vulnerability
 #------------------------------------------------------------------------------#
 ceew_d <- ceew_d %>%
-  dplyr::mutate(vulnerability_district = as.numeric(`Vulnerability Index`),
-                district_code = ifelse(nchar(`Census 2011 Code`)==1, paste0("00",`Census 2011 Code`),
-                                 ifelse(nchar(`Census 2011 Code`)==2, paste0("0",`Census 2011 Code`), `Census 2011 Code`))) %>%
+  dplyr::mutate(vulnerability_district = as.numeric(Vulnerability.Index),
+                district_code = ifelse(nchar(Census.2011.Code)==1, paste0("00",Census.2011.Code),
+                                 ifelse(nchar(Census.2011.Code)==2, paste0("0",Census.2011.Code), Census.2011.Code))) %>%
   dplyr::select(district_code, vulnerability_district) %>%
   dplyr::distinct()
 
@@ -186,23 +191,7 @@ covars <- base::merge(covars, hist_floods,
 
 rm(hist_floods)
 #------------------------------------------------------------------------------#
-# 2.6 News Media ###
-#------------------------------------------------------------------------------#
-news <- news %>%
-  dplyr::select(di_code, st_code, flood_news_count, starts_with("Tone")) %>%
-  dplyr::mutate(st_code = ifelse(nchar(st_code)==1, paste0("0",st_code), st_code),
-                di_code = ifelse(nchar(di_code)==1, paste0("00",di_code),
-                                 ifelse(nchar(di_code)==2, paste0("0",di_code), di_code))) %>%
-  dplyr::distinct()
-
-covars <- base::merge(covars, news,
-                      by.x=c("district_shape23_code", "state_shape23_code"),
-                      by.y=c("di_code", "st_code"),
-                      all.x=TRUE)
-
-rm(news)
-#------------------------------------------------------------------------------#
-# 2.7 Spatial Covariates ###
+# 2.6 Spatial Covariates ###
 #------------------------------------------------------------------------------#
 spat <- spat %>%
   dplyr::mutate(di_code = ifelse(nchar(di_code)==1, paste0("00",di_code),
@@ -212,9 +201,49 @@ covars <- base::merge(covars, spat, by.x=c("district_shape23_code"), by.y=c("di_
                       all.x=TRUE)
 
 rm(spat)
+#------------------------------------------------------------------------------#
+# 2.7 News Media ###
+#------------------------------------------------------------------------------#
+# Filter news data
+news <- news %>%
+  dplyr::select(EventType, Country, District_Clean, State_Clean, 
+                starts_with("Tone")) %>%
+  dplyr::filter(State_Clean != "",
+                District_Clean != "")
+
+# Merge with shapefile names
+news <- base::merge(news, news_key, by=c("District_Clean", "State_Clean"), all.x=TRUE)
+
+# Calculate Flood News Count
+news_flood <- news %>%
+  dplyr::mutate(flood_news_count = ifelse(EventType=="Flood", 1, 0)) %>%
+  dplyr::filter(!is.na(District_Match)) %>%
+  dplyr::group_by(District_Match) %>%
+  dplyr::summarise(flood_news_count = sum(flood_news_count)) %>%
+  dplyr::distinct()
+
+# Take Average of tone by shapefile districts
+news <- news %>%
+  dplyr::filter(!is.na(District_Match)) %>%
+  dplyr::group_by(District_Match) %>%
+  dplyr::summarise(across(where(is.numeric), mean, na.rm = TRUE)) %>%
+  dplyr::distinct()
+
+# Merge Flood news and tone
+news <- base::merge(news, news_flood, by="District_Match", all=TRUE)
+
+# Merge with covariates
+covars <- base::merge(covars, news,
+                      by.x=c("district_shape23"),
+                      by.y=c("District_Match"),
+                      all.x=TRUE)
+
+rm(news, news_key, news_flood, df2)
 #==============================================================================#
 # 3.0 Write Data ####
 #==============================================================================#
+setdiff(model[["var.names"]], colnames(covars))
+
 # Check for Missing Data
 covars <- covars[!is.na(covars$zone),]
 countna <- function(x){sum(is.na(x))}
