@@ -29,7 +29,10 @@ If you use this code or build on the analysis, please cite the article:
 
 ## Contact
 
-Jennifer Marlon, Yale School of the Environment, Yale University — <jennifer.marlon@yale.edu>
+Jennifer Marlon <br/>
+Yale School of the Environment, 
+Yale University <br/>
+<jennifer.marlon@yale.edu> <br/>
 
 ## Funding
 
