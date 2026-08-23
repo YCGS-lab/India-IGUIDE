@@ -23,7 +23,7 @@ If you use this code or build on the analysis, please cite the article:
   author = {Tripathy, Pratyush and Upadhyay, Surabhi and Alegbeleye, Okikiola Michael and Senkardesler, Emine and Pingali, Deepika and Goddard, Emily and Thaker, Jagadish and Leiserowitz, Anthony and Marlon, Jennifer},
   title  = {Mismatch between perceived and assessed flood risk},
   note   = {Manuscript in preparation},
-  url    = {https://github.com/YCGS-lab/India-IGUIDE}
+  url    = {https://github.com/YCGS-lab/india-flood-risk-perception-gap}
 }
 ```
 
